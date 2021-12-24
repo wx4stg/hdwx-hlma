@@ -12,10 +12,10 @@ from metpy.plots import USCOUNTIES
 import pandas as pd
 from datetime import datetime as dt
 from pathlib import Path
+import json
 
 
 axExtent = [-99.5, -91, 26, 33.5]
-
 def set_size(w, h, ax=None):
     if not ax: ax=plt.gca()
     l = ax.figure.subplotpars.left
@@ -26,8 +26,121 @@ def set_size(w, h, ax=None):
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
 
-def writeJson():
-    print("yay")
+def writeJson(productID, productPath, runPathExtension, validTime):
+    # If you have no idea what's going on or why I'm doing all this json stuff, 
+    # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
+    # Get description and GIS based on productID
+    if productID == 100:
+        productDesc = "HLMA VHF Sources"
+        isGIS = True
+        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+        fileExtension = "png"
+        productFrameCount = 60
+    elif productID == 101:
+        productDesc = "HLMA VHF Sources"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
+        fileExtension = "png"
+        productFrameCount = 60
+    elif productID == 102:
+        productDesc = "GR2Analyst HLMA VHF Sources"
+        isGIS = True
+        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+        fileExtension = "shp"
+        productFrameCount = 1
+    # For prettyness' sake, make all the publishTimes the same
+    publishTime = dt.utcnow()
+    # Create dictionary for the product. 
+    productDict = {
+        "productID" : productID,
+        "productDescription" : productDesc,
+        "productPath" : productPath,
+        "productReloadTime" : 60,
+        "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
+        "isForecast" : True,
+        "isGIS" : isGIS,
+        "fileExtension" : fileExtension
+    }
+    # Target path for the product json is just output/metadata/<productID>.json
+    productDictJsonPath = path.join(basePath, "output", "metadata", str(productID)+".json")
+    # Create output/metadata/ if it doesn't already exist
+    Path(path.dirname(productDictJsonPath)).mkdir(parents=True, exist_ok=True)
+    with open(productDictJsonPath, "w") as jsonWrite:
+        # Write the json. indent=4 gives pretty/human-readable format
+        json.dump(productDict, jsonWrite, indent=4)
+
+    # Now we need to write a json for the product run in output/metadata/products/<productID>/<runTime>.json
+    productRunDictPath = path.join(basePath, "output", "metadata", "products", str(productID), validTime.strftime("%Y%m%d%H00")+".json")
+    # Create parent directory if it doesn't already exist.
+    Path(path.dirname(productRunDictPath)).mkdir(parents=True, exist_ok=True)
+    # If the json file already exists, read it in to to discover which frames have already been generated
+    if path.exists(productRunDictPath):
+        with open(productRunDictPath, "r") as jsonRead:
+            oldData = json.load(jsonRead)
+        # Add previously generated frames to a list, framesArray
+        framesArray = oldData["productFrames"]
+    else:
+        # If that file didn't exist, then create an empty list instead
+        framesArray = list()
+    # Now we need to add the frame we just wrote, as well as any that exist in the output directory that don't have metadata yet. 
+    # To do this, we first check if the output directory is not empty.
+    productRunPath = path.join(basePath, "output", productPath, runPathExtension)
+    if len(listdir(productRunPath)) > 0:
+        # If there are files inside, list them all
+        frameNames = listdir(productRunPath)
+        # get an array of integers representing the minutes past the hour of frames that have already been generated
+        frameMinutes = [int(framename.replace(".png", "")) for framename in frameNames]
+        # Loop through the previously-generated minutes and generate metadata for each
+        for frameMin in frameMinutes:
+            frmDict = {
+                "fhour" : 0, # forecast hour is 0 for non-forecasts
+                "filename" : str(frameMin)+".png",
+                "gisInfo" : gisInfo,
+                "valid" : int(validTime.strftime("%Y%m%d%H00"))+frameMin
+            }
+            # If this dictionary isn't already in the framesArray, add it
+            if frmDict not in framesArray:
+                framesArray.append(frmDict)
+    productRunDict = {
+        "publishTime" : publishTime.strftime("%Y%m%d%H%M"),
+        "pathExtension" : runPathExtension,
+        "runName" : validTime.strftime("%d %b %Y %HZ"),
+        "availableFrameCount" : len(framesArray),
+        "totalFrameCount" : productFrameCount,
+        "productFrames" : sorted(framesArray, key=lambda dict: dict["valid"]) # productFramesArray, sorted by increasing valid Time
+    }
+    # Write productRun dictionary to json
+    with open(productRunDictPath, "w") as jsonWrite:
+        json.dump(productRunDict, jsonWrite, indent=4)
+
+    # Now we need to create a dictionary for the product type (TAMU)
+    productTypeID = 1
+    # Output for this json is output/metadata/productTypes/1.json
+    productTypeDictPath = path.join(basePath, "output/metadata/productTypes/"+str(productTypeID)+".json")
+    # Create output directory if it doesn't already exist
+    Path(path.dirname(productTypeDictPath)).mkdir(parents=True, exist_ok=True)
+    # Create empty list that will soon hold a dict for each of the products generated by this script
+    productsInType = list()
+    # If the productType json file already exists, read it in to discover which products it contains
+    if path.exists(productTypeDictPath):
+        with open(productTypeDictPath, "r") as jsonRead:
+            oldProductTypeDict = json.load(jsonRead)
+        # Add all of the products from the json file into the productsInType list...
+        for productInOldDict in oldProductTypeDict["products"]:
+            # ...except for the one that's currently being generated (prevents duplicating it)
+            if productInOldDict["productID"] != productID:
+                productsInType.append(productInOldDict)
+    # Add the productDict for the product we just generated
+    productsInType.append(productDict)
+    # Create productType Dict
+    productTypeDict = {
+        "productTypeID" : productTypeID,
+        "productTypeDescription" : "TAMU",
+        "products" : sorted(productsInType, key=lambda dict: dict["productID"]) # productsInType, sorted by productID
+    }
+    # Write productType dict to json
+    with open(productTypeDictPath, "w") as jsonWrite:
+        json.dump(productTypeDict, jsonWrite, indent=4)
 
 def makeLmaPlot(lmaFilePath):
     # Read in LMA data
@@ -46,10 +159,13 @@ def makeLmaPlot(lmaFilePath):
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
     # Extract the time of the plot
     timeOfPlot = lmaData["Datetime"][0].to_pydatetime()
-    # Create a path object hlma/vhf/<year>/<month>/<day>/<hour>/<minute>.png. Use os.path to preserve Windows compatibility
-    pathExt = path.join("hlma", "vhf", dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00", dt.strftime(timeOfPlot, "%M")+".png")
-    # Target path for the "GIS"/transparent image is output/gisproducts/<pathExt>
-    gisSavePath = path.join(basePath, "output", "gisproducts", pathExt)
+    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+    # Use os.path to preserve Windows compatibility
+    gisProductPath = path.join("gisproducts", "hlma", "vhf")
+    # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
+    runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
+    # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
+    gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     # Create target directory if it doesn't already exist
     Path(path.dirname(gisSavePath)).mkdir(parents=True, exist_ok=True)
     # Get the exact extent of just the axes without the matplotlib auto-generated whitespace
@@ -57,6 +173,8 @@ def makeLmaPlot(lmaFilePath):
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
+    # Write metadata for the product
+    writeJson(100, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("50m"), linewidth=0.5, zorder=3)
@@ -96,13 +214,16 @@ def makeLmaPlot(lmaFilePath):
     fig.set_facecolor("white")
     # Set size to 1080p, resolution of the weather center monitors
     fig.set_size_inches(1920*px, 1080*px)
-    # Target path for the "static"/non-GIS/opaque image is output/products/<pathExt>
-    staticSavePath = path.join(basePath, "output", "products", pathExt)
+    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+    staticProductPath = path.join("products", "hlma", "vhf")
+    # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
+    staticSavePath = path.join(basePath, "output", staticProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     # Create save directory if it doesn't already exist
     Path(path.dirname(staticSavePath)).mkdir(parents=True, exist_ok=True)
     # Write the image
     fig.savefig(staticSavePath)
-
+    # Write metadata for the product
+    writeJson(101, staticProductPath, runPathExt, timeOfPlot)
 
 if __name__ == "__main__":
     # get path to starting dir
