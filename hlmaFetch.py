@@ -16,13 +16,16 @@ if __name__ == '__main__':
     # Get the time one hour ago
     oneHourAgo = now - timedelta(hours=1)
     lastHourJsonPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
-    with open(lastHourJsonPath, "r") as jsonRead:
-        lastHourDict = json.load(jsonRead)
-    generatedFrames = [frame["valid"] for frame in lastHourDict["productFrames"]]
+    generatedFrames = list()
+    if path.exists(lastHourJsonPath):
+        with open(lastHourJsonPath, "r") as jsonRead:
+            lastHourDict = json.load(jsonRead)
+        [generatedFrames.append(frame["valid"]) for frame in lastHourDict["productFrames"]]
     currentHourJsonPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(now, "%Y%m%d%H00")+".json")
-    with open(currentHourJsonPath, "r") as jsonRead:
-        currentHourDict = json.load(jsonRead)
-    [generatedFrames.append(frame["valid"]) for frame in currentHourDict["productFrames"]]
+    if path.exists(currentHourJsonPath):
+        with open(currentHourJsonPath, "r") as jsonRead:
+            currentHourDict = json.load(jsonRead)
+        [generatedFrames.append(frame["valid"]) for frame in currentHourDict["productFrames"]]
     # Generates a list of the hypothetical file paths to this hour and last hour of HLMA data
     lastHourInt = int(dt.strftime(oneHourAgo, "%Y%m%d%H00"))
     currentHourInt = int(dt.strftime(now, "%Y%m%d%H00"))
@@ -30,7 +33,7 @@ if __name__ == '__main__':
     filesToCopy = list()
     lmaDataBasePath = path.join("home", "lma_admin", "lma", "realtime", "processed_data")
     dataInputPath = path.join(basePath, "lightningin")
-    Path.mkdir(dataInputPath, parents=True, exist_ok=True)
+    Path(dataInputPath).mkdir(parents=True, exist_ok=True)
     for min in range(0, 60):
         if (lastHourInt + min) not in generatedFrames:
             hypPathLastHour = path.join(lmaDataBasePath, dt.strftime(oneHourAgo, "%Y")[-2:]+dt.strftime(oneHourAgo, "%m%d"), dt.strftime(oneHourAgo ,"%H"), dt.strftime(oneHourAgo, "%m"))
