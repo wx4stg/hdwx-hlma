@@ -2,14 +2,14 @@
 # Python-based plotting of Houston Lightning Mapping Array data for next-gen HDWX
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
-from os import path, listdir
+from os import path, listdir, remove
 from pyxlma.lmalib.io import read as lma_read
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimage
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
 from metpy.plots import USCOUNTIES
-import pandas as pd # never used but needed for datetime conversion
+import pandas as pd
 from datetime import datetime as dt, timedelta
 from pathlib import Path
 import json
@@ -142,7 +142,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     with open(productTypeDictPath, "w") as jsonWrite:
         json.dump(productTypeDict, jsonWrite, indent=4)
 
-def makeLmaPlot(lmaFilePath):
+def makeOneMinPlots(lmaFilePath):
     # Read in LMA data
     lmaData = lma_read.lmafile(lmaFilePath).readfile()
     # Create fig/ax
@@ -225,7 +225,7 @@ def makeLmaPlot(lmaFilePath):
     # Write metadata for the product
     writeJson(101, staticProductPath, runPathExt, timeOfPlot)
     # Close figure when done (memory management)
-    plt.close(fig)
+    plt.close(fig)  
 
 if __name__ == "__main__":
     # get path to starting dir
@@ -246,18 +246,20 @@ if __name__ == "__main__":
             lastHourData = json.load(jsonRead)
         # Add already-generated frames to alreadyPlottedFrames list
         # The valid time gets converted first from an int to a string, then the string is trimmed to only include HHMM
-        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]) for frame in lastHourData["productFrames"]]
+        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourData["productFrames"]]
     # Do the same thing for this hour's metadata
     thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(now, "%Y%m%d%H00")+".json")
     if path.exists(thisHourMetadataPath):
         with open(thisHourMetadataPath, "r") as jsonRead:
             thisHourData = json.load(jsonRead)
-        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]) for frame in thisHourData["productFrames"]]
+        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourData["productFrames"]]
     # Plot every file in the input directory
     for file in sorted(listdir(inputPath)):
-        shouldPlotThisFile = True
-        for alreadyPlottedTime in alreadyPlottedFrames:
-            if alreadyPlottedTime in file:
-                shouldPlotThisFile = False
-        if shouldPlotThisFile == True:
-            makeLmaPlot(path.join(inputPath, file))
+        timeOfFileArr = file.split("_")
+        if timeOfFileArr in alreadyPlottedFrames:
+            continue
+        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
+        if timeOfFile < now - timedelta(hours=2):
+            remove(path.join(inputPath, file))
+            continue
+        makeOneMinPlots(path.join(inputPath, file))
