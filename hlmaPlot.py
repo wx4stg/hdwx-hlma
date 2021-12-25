@@ -30,23 +30,23 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     # If you have no idea what's going on or why I'm doing all this json stuff, 
     # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
     # Get description and GIS based on productID
-    if productID == 100:
+    if productID == 140:
         productDesc = "HLMA VHF Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
         fileExtension = "png"
         productFrameCount = 60
-    elif productID == 101:
+    elif productID == 141:
         productDesc = "HLMA VHF Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
         fileExtension = "png"
         productFrameCount = 60
-    elif productID == 102:
+    elif productID == 142:
         productDesc = "GR2Analyst HLMA VHF Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        fileExtension = "shp"
+        fileExtension = "php"
         productFrameCount = 1
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
@@ -174,7 +174,7 @@ def makeOneMinPlots(lmaFilePath):
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Write metadata for the product
-    writeJson(100, gisProductPath, runPathExt, timeOfPlot)
+    writeJson(140, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("50m"), linewidth=0.5, zorder=3)
@@ -223,9 +223,9 @@ def makeOneMinPlots(lmaFilePath):
     # Write the image
     fig.savefig(staticSavePath)
     # Write metadata for the product
-    writeJson(101, staticProductPath, runPathExt, timeOfPlot)
+    writeJson(141, staticProductPath, runPathExt, timeOfPlot)
     # Close figure when done (memory management)
-    plt.close(fig)  
+    plt.close(fig)
 
 if __name__ == "__main__":
     # get path to starting dir
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     # Create (empty, but add to it in a sec...) list representing already plotted frames
     alreadyPlottedFrames = list()
     # Get path to last hour's json metadata
-    lastHourMetadataPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
+    lastHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
     # Read in last hour's metadata
     if path.exists(lastHourMetadataPath):
         with open(lastHourMetadataPath, "r") as jsonRead:
@@ -248,7 +248,7 @@ if __name__ == "__main__":
         # The valid time gets converted first from an int to a string, then the string is trimmed to only include HHMM
         [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourData["productFrames"]]
     # Do the same thing for this hour's metadata
-    thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(now, "%Y%m%d%H00")+".json")
+    thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(now, "%Y%m%d%H00")+".json")
     if path.exists(thisHourMetadataPath):
         with open(thisHourMetadataPath, "r") as jsonRead:
             thisHourData = json.load(jsonRead)
@@ -256,7 +256,7 @@ if __name__ == "__main__":
     # Plot every file in the input directory
     for file in sorted(listdir(inputPath)):
         timeOfFileArr = file.split("_")
-        if timeOfFileArr in alreadyPlottedFrames:
+        if timeOfFileArr[2] in alreadyPlottedFrames:
             continue
         timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
         if timeOfFile < now - timedelta(hours=2):
