@@ -30,23 +30,23 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     # If you have no idea what's going on or why I'm doing all this json stuff, 
     # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
     # Get description and GIS based on productID
-    if productID == 100:
+    if productID == 140:
         productDesc = "HLMA VHF Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
         fileExtension = "png"
         productFrameCount = 60
-    elif productID == 101:
+    elif productID == 141:
         productDesc = "HLMA VHF Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
         fileExtension = "png"
         productFrameCount = 60
-    elif productID == 102:
+    elif productID == 142:
         productDesc = "GR2Analyst HLMA VHF Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        fileExtension = "shp"
+        fileExtension = "php"
         productFrameCount = 1
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
@@ -83,24 +83,34 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         # If that file didn't exist, then create an empty list instead
         framesArray = list()
     # Now we need to add the frame we just wrote, as well as any that exist in the output directory that don't have metadata yet. 
-    # To do this, we first check if the output directory is not empty.
-    productRunPath = path.join(basePath, "output", productPath, runPathExtension)
-    if len(listdir(productRunPath)) > 0:
-        # If there are files inside, list them all
-        frameNames = listdir(productRunPath)
-        # get an array of integers representing the minutes past the hour of frames that have already been generated
-        frameMinutes = [int(framename.replace(".png", "")) for framename in frameNames]
-        # Loop through the previously-generated minutes and generate metadata for each
-        for frameMin in frameMinutes:
-            frmDict = {
-                "fhour" : 0, # forecast hour is 0 for non-forecasts
-                "filename" : str(frameMin)+".png",
-                "gisInfo" : gisInfo,
-                "valid" : int(validTime.strftime("%Y%m%d%H00"))+frameMin
-            }
-            # If this dictionary isn't already in the framesArray, add it
-            if frmDict not in framesArray:
-                framesArray.append(frmDict)
+    # However, we don't need to do this for the gr2a products, since they only have one "frame".
+    # So first we check to see if we're metadataing a gr2a product, and if we are, then we can skip all this.
+    if "GR2Analyst" in productDesc:
+        framesArray = [{
+            "fhour" : 0,
+            "filename" : "1min.php",
+            "gisInfo" : gisInfo,
+            "valid" : int(validTime.strftime("%Y%m%d%H%M"))
+        }]
+    else:
+        # To do this, we first check if the output directory is not empty.
+        productRunPath = path.join(basePath, "output", productPath, runPathExtension)
+        if len(listdir(productRunPath)) > 0:
+            # If there are files inside, list them all
+            frameNames = listdir(productRunPath)
+            # get an array of integers representing the minutes past the hour of frames that have already been generated
+            frameMinutes = [int(framename.replace(".png", "")) for framename in frameNames]
+            # Loop through the previously-generated minutes and generate metadata for each
+            for frameMin in frameMinutes:
+                frmDict = {
+                    "fhour" : 0, # forecast hour is 0 for non-forecasts
+                    "filename" : str(frameMin)+".png",
+                    "gisInfo" : gisInfo,
+                    "valid" : int(validTime.strftime("%Y%m%d%H00"))+frameMin
+                }
+                # If this dictionary isn't already in the framesArray, add it
+                if frmDict not in framesArray:
+                    framesArray.append(frmDict)
     productRunDict = {
         "publishTime" : publishTime.strftime("%Y%m%d%H%M"),
         "pathExtension" : runPathExtension,
@@ -142,7 +152,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     with open(productTypeDictPath, "w") as jsonWrite:
         json.dump(productTypeDict, jsonWrite, indent=4)
 
-def makeOneMinPlots(lmaFilePath):
+def makeOneMinPlots(lmaFilePath, shouldMakeGR2APlot):
     # Read in LMA data
     lmaData = lma_read.lmafile(lmaFilePath).readfile()
     # Create fig/ax
@@ -174,7 +184,7 @@ def makeOneMinPlots(lmaFilePath):
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Write metadata for the product
-    writeJson(100, gisProductPath, runPathExt, timeOfPlot)
+    writeJson(140, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("50m"), linewidth=0.5, zorder=3)
@@ -223,9 +233,31 @@ def makeOneMinPlots(lmaFilePath):
     # Write the image
     fig.savefig(staticSavePath)
     # Write metadata for the product
-    writeJson(101, staticProductPath, runPathExt, timeOfPlot)
+    writeJson(141, staticProductPath, runPathExt, timeOfPlot)
     # Close figure when done (memory management)
-    plt.close(fig)  
+    plt.close(fig)
+    if shouldMakeGR2APlot:
+        # Create a GR2Analyst compatible placefile
+        placeFileString = ";One-minute HLMA Data\n;Generated by pyxlma on next-gen HDWX\n;Installation instructions: GR2Analyst -> Window -> Placefile manager -> + -> Add the URL to this file\n;Valid: "+dt.strftime(timeOfPlot, "%Y-%m-%d %H:%M")+"\n;Code by Sam Gardner <stgardner4@tamu.edu>\nThreshold: 999\nRefresh: 1\nIconFile: 1, 32, 32, 16, 16, http://weather-dev.geos.tamu.edu/wx4stg/gr2a/lightningicon.png\n"
+        # Add all of our lightning points
+        for _, vhfSourcePoint in lmaData.iterrows():
+            # Add an icon for every vhf source
+            placeFileString = placeFileString+"Icon: "+str(vhfSourcePoint["lat"])+", "+str(vhfSourcePoint["lon"])+" , 000, 1, 1, "+dt.strftime(vhfSourcePoint["Datetime"].to_pydatetime(), "%H:%M:%S.%f")+r"\nAltitude (m): "+str(vhfSourcePoint["alt(m)"])+r"\nReduced chi^2: "+str(vhfSourcePoint["reduced chi^2"])+r"\nPower (dBW): "+str(vhfSourcePoint["P(dBW)"])+r"\nStation Count: "+str(vhfSourcePoint["Station Count"])+"\n"
+        # Create a path object for GR2A placefile's productPath
+        gr2aProductPath = path.join("gr2a", ".")
+        # Target path for gr2a placefiles is output/gr2a/1min.txt
+        gr2aSavePath = path.join(basePath, "output", gr2aProductPath, "1min.txt")
+        # Create parent dir
+        Path(path.dirname(gr2aSavePath)).mkdir(parents=True, exist_ok=True)
+        # write out the placefile
+        with open(gr2aSavePath, "w") as textWrite:
+            textWrite.write(placeFileString)
+        # Also write out php file for the website ( this is necessary because pointing browser at a txt will result in caching)
+        phpText = "<?php\n    header('Content-type: text/plain');\n    echo file_get_contents(\"./testtext.txt\")\n?>"
+        with open(path.join(basePath, "output", gr2aProductPath, "1min.php"), "w") as phpWrite:
+            phpWrite.write(phpText)
+        # write metadata for gr2a file
+        writeJson(142, gr2aProductPath, "", timeOfPlot)
 
 if __name__ == "__main__":
     # get path to starting dir
@@ -239,7 +271,7 @@ if __name__ == "__main__":
     # Create (empty, but add to it in a sec...) list representing already plotted frames
     alreadyPlottedFrames = list()
     # Get path to last hour's json metadata
-    lastHourMetadataPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
+    lastHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
     # Read in last hour's metadata
     if path.exists(lastHourMetadataPath):
         with open(lastHourMetadataPath, "r") as jsonRead:
@@ -248,18 +280,21 @@ if __name__ == "__main__":
         # The valid time gets converted first from an int to a string, then the string is trimmed to only include HHMM
         [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourData["productFrames"]]
     # Do the same thing for this hour's metadata
-    thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(now, "%Y%m%d%H00")+".json")
+    thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(now, "%Y%m%d%H00")+".json")
     if path.exists(thisHourMetadataPath):
         with open(thisHourMetadataPath, "r") as jsonRead:
             thisHourData = json.load(jsonRead)
         [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourData["productFrames"]]
     # Plot every file in the input directory
-    for file in sorted(listdir(inputPath)):
+    filesToPlot = sorted(listdir(inputPath))
+    for file in filesToPlot:
         timeOfFileArr = file.split("_")
-        if timeOfFileArr in alreadyPlottedFrames:
+        if timeOfFileArr[2] in alreadyPlottedFrames:
             continue
         timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
         if timeOfFile < now - timedelta(hours=2):
             remove(path.join(inputPath, file))
             continue
-        makeOneMinPlots(path.join(inputPath, file))
+        shouldPlotGR2A = True if file == filesToPlot[-1] else False
+        print("Plotting... "+file)
+        makeOneMinPlots(path.join(inputPath, file), shouldPlotGR2A)
