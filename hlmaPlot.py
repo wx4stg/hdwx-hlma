@@ -224,6 +224,8 @@ def makeLmaPlot(lmaFilePath):
     fig.savefig(staticSavePath)
     # Write metadata for the product
     writeJson(101, staticProductPath, runPathExt, timeOfPlot)
+    # Close figure when done (memory management)
+    plt.close(fig)
 
 if __name__ == "__main__":
     # get path to starting dir
