@@ -24,14 +24,14 @@ def make_icons():
         modData = origData.copy()
         modData[..., :-1][replaceMask.T] = (targetR, targetG, targetB)
         imgToAdd = Image.fromarray(modData)
-        if path.exists("assets/icons.png"):
-            currentImage = Image.open("assets/icons.png")
+        if path.exists("assets/icons1.png"):
+            currentImage = Image.open("assets/icons1.png")
             newImage = Image.new("RGBA", (currentImage.size[0]+imgToAdd.size[0], currentImage.size[1]))
             newImage.paste(currentImage, (0, 0))
         else:
             newImage = Image.new("RGBA", imgToAdd.size)
         newImage.paste(imgToAdd, (newImage.size[0]-imgToAdd.size[0], 0))
-        newImage.save("assets/icons.png")
+        newImage.save("assets/icons1.png")
     for b in range(0, 255):
         # R = 255->0, G = 255, B = 0
         sum += 1
@@ -42,14 +42,14 @@ def make_icons():
         modData = origData.copy()
         modData[..., :-1][replaceMask.T] = (targetR, targetG, targetB)
         imgToAdd = Image.fromarray(modData)
-        if path.exists("assets/icons.png"):
-            currentImage = Image.open("assets/icons.png")
+        if path.exists("assets/icons2.png"):
+            currentImage = Image.open("assets/icons2.png")
             newImage = Image.new("RGBA", (currentImage.size[0]+imgToAdd.size[0], currentImage.size[1]))
             newImage.paste(currentImage, (0, 0))
         else:
             newImage = Image.new("RGBA", imgToAdd.size)
         newImage.paste(imgToAdd, (newImage.size[0]-imgToAdd.size[0], 0))
-        newImage.save("assets/icons.png")
+        newImage.save("assets/icons2.png")
 
     for c in range(0, 255):
         # R = 0, G = 255, B = 0->255
@@ -61,14 +61,14 @@ def make_icons():
         modData = origData.copy()
         modData[..., :-1][replaceMask.T] = (targetR, targetG, targetB)
         imgToAdd = Image.fromarray(modData)
-        if path.exists("assets/icons.png"):
-            currentImage = Image.open("assets/icons.png")
+        if path.exists("assets/icons3.png"):
+            currentImage = Image.open("assets/icons3.png")
             newImage = Image.new("RGBA", (currentImage.size[0]+imgToAdd.size[0], currentImage.size[1]))
             newImage.paste(currentImage, (0, 0))
         else:
             newImage = Image.new("RGBA", imgToAdd.size)
         newImage.paste(imgToAdd, (newImage.size[0]-imgToAdd.size[0], 0))
-        newImage.save("assets/icons.png")
+        newImage.save("assets/icons3.png")
 
     for d in range(0, 255):
         # R = 0, G = 255->0, B = 255
@@ -80,14 +80,14 @@ def make_icons():
         modData = origData.copy()
         modData[..., :-1][replaceMask.T] = (targetR, targetG, targetB)
         imgToAdd = Image.fromarray(modData)
-        if path.exists("assets/icons.png"):
-            currentImage = Image.open("assets/icons.png")
+        if path.exists("assets/icons4.png"):
+            currentImage = Image.open("assets/icons4.png")
             newImage = Image.new("RGBA", (currentImage.size[0]+imgToAdd.size[0], currentImage.size[1]))
             newImage.paste(currentImage, (0, 0))
         else:
             newImage = Image.new("RGBA", imgToAdd.size)
         newImage.paste(imgToAdd, (newImage.size[0]-imgToAdd.size[0], 0))
-        newImage.save("assets/icons.png")
+        newImage.save("assets/icons4.png")
 
     for e in range(0, 256):
         # R = 0, G = 255->0, B = 255
@@ -99,14 +99,14 @@ def make_icons():
         modData = origData.copy()
         modData[..., :-1][replaceMask.T] = (targetR, targetG, targetB)
         imgToAdd = Image.fromarray(modData)
-        if path.exists("assets/icons.png"):
-            currentImage = Image.open("assets/icons.png")
+        if path.exists("assets/icons5.png"):
+            currentImage = Image.open("assets/icons5.png")
             newImage = Image.new("RGBA", (currentImage.size[0]+imgToAdd.size[0], currentImage.size[1]))
             newImage.paste(currentImage, (0, 0))
         else:
             newImage = Image.new("RGBA", imgToAdd.size)
         newImage.paste(imgToAdd, (newImage.size[0]-imgToAdd.size[0], 0))
-        newImage.save("assets/icons.png")
+        newImage.save("assets/icons5.png")
 
 if __name__ == '__main__':
     make_icons()
