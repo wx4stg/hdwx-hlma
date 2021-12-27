@@ -305,8 +305,8 @@ if __name__ == "__main__":
             lastHourTenMinData = json.load(jsonRead)
         [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourTenMinData]
     thisHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(now, "%Y%m%d%H00")+".json")
-    if path.exists(thisHourMetadataPath):
-        with open(thisHourMetadataPath, "r") as jsonRead:
+    if path.exists(thisHourTenMinMetadataPath):
+        with open(thisHourTenMinMetadataPath, "r") as jsonRead:
             thisHourTenMinData = json.load(jsonRead)
         [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourTenMinData]
     inputDirContents = sorted(listdir(inputPath))
