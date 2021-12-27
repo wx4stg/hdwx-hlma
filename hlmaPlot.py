@@ -157,8 +157,10 @@ def makeOneMinPlots(lmaFilePath):
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
-    # Extract the time of the plot
-    timeOfPlot = lmaData["Datetime"][0].to_pydatetime()
+    # Extract the start time of the plot
+    startTimeOfPlot = lmaData["Datetime"][0].to_pydatetime()
+    # Since this is a one-minute file, the end time is just the start time plus one minute
+    timeOfPlot = startTimeOfPlot + timedelta(minutes=1)
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
     # Use os.path to preserve Windows compatibility
     gisProductPath = path.join("gisproducts", "hlma", "vhf")
@@ -185,7 +187,7 @@ def makeOneMinPlots(lmaFilePath):
     # and we'll worry about positioning later
     tax = fig.add_axes([0,0,(ax.get_position().width/3),.05])
     # Add a descriptive title
-    tax.text(0.5, 0.5, "Houston LMA 1-minute VHF Sources\nValid "+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
+    tax.text(0.5, 0.5, "Houston LMA 1-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+"through"+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
     # add credit
     tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
     # Turn off the axis spines and ticks to give the appearance of floating text
