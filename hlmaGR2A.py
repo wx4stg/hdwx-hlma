@@ -117,7 +117,7 @@ def makeSrcPlacefile(lmaFilePaths):
     for lat, lon, time, alt, chi2, power, stations in zip(lmaData.event_latitude.data, lmaData.event_longitude.data, lmaData.event_time.data, lmaData.event_altitude.data, lmaData.event_chi2.data, lmaData.event_power.data, lmaData.event_stations.data):
         time = pd.to_datetime(time)
         # Get time elapsed since start of file range until the point
-        timeOfPoint = time - timeOfPlot
+        timeOfPoint = time - startTimeOfPlot
         # Convert that time to a float
         timeOfPoint = timeOfPoint.seconds + timeOfPoint.microseconds*0.000001
         # There are 1020 icons in lightningicons.png, so based on the time scale, pick which one to use
