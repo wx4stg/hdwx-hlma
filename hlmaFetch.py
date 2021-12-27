@@ -3,7 +3,7 @@
 # Created 23 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 from datetime import datetime as dt, timedelta
-from os import path, listdir, sep
+from os import path, listdir, sep, remove
 import json
 from shutil import copyfile
 from pathlib import Path
@@ -50,3 +50,8 @@ if __name__ == '__main__':
                     for file in contentsOfCurrentHour:
                         if file.endswith(".dat.gz"):
                             copyfile(path.join(hypPathCurrentHour, file), path.join(dataInputPath, file))
+    for file in listdir(dataInputPath):
+        timeOfFileArr = file.split("_")
+        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
+        if timeOfFile < now - timedelta(hours=2):
+            remove(path.join(dataInputPath, file))
