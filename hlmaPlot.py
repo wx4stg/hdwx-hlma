@@ -6,13 +6,16 @@ from os import path, listdir, remove
 from pyxlma.lmalib.io import read as lma_read
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimage
+from matplotlib import colors
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
+import numpy as np
 from metpy.plots import USCOUNTIES
 import pandas as pd
 from datetime import datetime as dt, timedelta
 from pathlib import Path
 import json
+import warnings
 
 
 axExtent = [-99.5, -91, 26, 33.5]
@@ -31,23 +34,29 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
     # Get description and GIS based on productID
     if productID == 140:
-        productDesc = "HLMA VHF Sources"
+        productDesc = "HLMA VHF 1-minute Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
         fileExtension = "png"
         productFrameCount = 60
     elif productID == 141:
-        productDesc = "HLMA VHF Sources"
+        productDesc = "HLMA VHF 1-minute Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
         fileExtension = "png"
         productFrameCount = 60
-    elif productID == 142:
-        productDesc = "GR2Analyst HLMA VHF Sources"
+    elif productID == 143:
+        productDesc = "HLMA VHF 10-minute Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        fileExtension = "php"
-        productFrameCount = 1
+        fileExtension = "png"
+        productFrameCount = 60
+    elif productID == 144:
+        productDesc = "HLMA VHF 10-minute Sources"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+        fileExtension = "png"
+        productFrameCount = 60
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
     # Create dictionary for the product. 
@@ -142,14 +151,34 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     with open(productTypeDictPath, "w") as jsonWrite:
         json.dump(productTypeDict, jsonWrite, indent=4)
 
-def makeOneMinPlots(lmaFilePath):
-    # Read in LMA data
-    lmaData = lma_read.lmafile(lmaFilePath).readfile()
+def makeSourcePlots(lmaFilePaths):
+    # Silence error_bad_lines warning when reading in LMA data
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        # Read in LMA data
+        lmaData, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
+    # Set parameters for 1 or 10 minute data
+    print("\n>>>>>>>>>>>>>>>>>>>>>>>>>>")
+    if len(lmaFilePaths) == 1:
+        gisProductID = 140
+        staticProductID = 141
+        print("Plotting 1-minute data for "+startTimeOfPlot.strftime("%H:%M"))
+    else:
+        gisProductID = 143
+        staticProductID = 144
+        print("Plotting 10-minute data for "+startTimeOfPlot.strftime("%H:%M"))
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>\n")
     # Create fig/ax
     fig = plt.figure()
     ax = plt.axes(projection=ccrs.epsg(3857))
-    # Plot Data
-    ax.scatter(lmaData["lon"], lmaData["lat"], 1, "red", transform=ccrs.PlateCarree(), zorder=4)
+    # We want to color our points by the time that they occurred, relative to the rest of the dataset
+    times = [(pd.to_datetime(npt) - startTimeOfPlot).seconds + (pd.to_datetime(npt) - startTimeOfPlot).microseconds*0.000001 for npt in lmaData.event_time.data]
+    # Normalize the colormap for the number of minutes we're plotting
+    norm = colors.Normalize(0, 60*len(lmaFilePaths))
+    # We want to "mask out" points where the event chi^2 is greater than 2
+    chi2Mask = np.where(lmaData.event_chi2.data > 2.0, 1, 0)
+    # Plot data
+    vhfSct = ax.scatter(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), 3, np.ma.masked_array(times, mask=chi2Mask), transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", norm=norm)
     # Get a handle to a pixel
     px = 1/plt.rcParams["figure.dpi"]
     # Make the GIS plot have a decent resolution. This wont end up being exactly 1920 by 1080 
@@ -157,13 +186,11 @@ def makeOneMinPlots(lmaFilePath):
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
-    # Extract the start time of the plot
-    startTimeOfPlot = lmaData["Datetime"][0].to_pydatetime()
-    # Since this is a one-minute file, the end time is just the start time plus one minute
-    timeOfPlot = startTimeOfPlot + timedelta(minutes=1)
+    # Add the number of one minute files ingested to the start time to get the end time
+    timeOfPlot = startTimeOfPlot + timedelta(minutes=len(lmaFilePaths))
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
     # Use os.path to preserve Windows compatibility
-    gisProductPath = path.join("gisproducts", "hlma", "vhf")
+    gisProductPath = path.join("gisproducts", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
     # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
     runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
     # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
@@ -176,18 +203,22 @@ def makeOneMinPlots(lmaFilePath):
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Write metadata for the product
-    writeJson(140, gisProductPath, runPathExt, timeOfPlot)
+    writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
-    ax.add_feature(cfeat.STATES.with_scale("50m"), linewidth=0.5, zorder=3)
-    ax.add_feature(cfeat.COASTLINE.with_scale("50m"), linewidth=0.5, zorder=3)
+    ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
+    ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
     # Move the data axes to maximize the amount of space available to it
     ax.set_position([0.05, 0.11, .9, .87])
+    # Create a "colorbar axes". We want it to be beneath the plot, under the far left third.
+    cbax = fig.add_axes([0, 0, (ax.get_position().width/3), .025])
+    fig.colorbar(vhfSct, cax=cbax, orientation="horizontal", label="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
+    cbax.set_position([0.05, ax.get_position().y0-.01-cbax.get_position().height, cbax.get_position().width, cbax.get_position().height])
     # Create a "title axes". We want it to be one third the width of the data axes, height will be handled by matplotlib automatically,
     # and we'll worry about positioning later
     tax = fig.add_axes([0,0,(ax.get_position().width/3),.05])
     # Add a descriptive title
-    tax.text(0.5, 0.5, "Houston LMA 1-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+"through"+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
+    tax.text(0.5, 0.5, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
     # add credit
     tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
     # Turn off the axis spines and ticks to give the appearance of floating text
@@ -197,7 +228,7 @@ def makeOneMinPlots(lmaFilePath):
     tax.tick_params(bottom=False, labelbottom=False)
     # Now we handle positioning, we want the plot to be centered below the data axes, as close to the bottom of the figure as possible
     # without cutting off the xlabel, and retain the original width/height
-    tax.set_position([(ax.get_position().width/2)-(tax.get_position().width/2)+ax.get_position().x0,0.05,tax.get_position().width,tax.get_position().height], which="both")
+    tax.set_position([(ax.get_position().width/2)-(tax.get_position().width/2)+ax.get_position().x0,ax.get_position().y0-.01-tax.get_position().height,tax.get_position().width,tax.get_position().height], which="both")
     # Add a "logo axes" to display the TAMU ATMO logo. Again, one third the width of the data axes.
     lax = fig.add_axes([0,0,(ax.get_position().width/3),1])
     # The logo axes must have the same aspect ratio as the image we're trying to display or else the image will be stretched/compressed
@@ -211,13 +242,13 @@ def makeOneMinPlots(lmaFilePath):
     # show the image
     lax.imshow(atmoLogo)
     # We want the logo axes to be all the way to the right, and as low as possible without cutting anything off
-    lax.set_position([(ax.get_position().width)-(lax.get_position().width/2)+ax.get_position().x0, .03, lax.get_position().width, lax.get_position().height], which="both")
+    lax.set_position([.95-lax.get_position().width, ax.get_position().y0-.01-lax.get_position().height, lax.get_position().width, lax.get_position().height], which="both")
     # Make sure image is opaque
     fig.set_facecolor("white")
     # Set size to 1080p, resolution of the weather center monitors
     fig.set_size_inches(1920*px, 1080*px)
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
-    staticProductPath = path.join("products", "hlma", "vhf")
+    staticProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
     # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
     staticSavePath = path.join(basePath, "output", staticProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     # Create save directory if it doesn't already exist
@@ -225,7 +256,7 @@ def makeOneMinPlots(lmaFilePath):
     # Write the image
     fig.savefig(staticSavePath)
     # Write metadata for the product
-    writeJson(141, staticProductPath, runPathExt, timeOfPlot)
+    writeJson(staticProductID, staticProductPath, runPathExt, timeOfPlot)
     # Close figure when done (memory management)
     plt.close(fig)
 
@@ -239,29 +270,50 @@ if __name__ == "__main__":
     # Get time one hour ago
     oneHourAgo = now - timedelta(hours=1)
     # Create (empty, but add to it in a sec...) list representing already plotted frames
-    alreadyPlottedFrames = list()
+    alreadyPlottedOneMinFrames = list()
     # Get path to last hour's json metadata
-    lastHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
+    lastHourOneMinMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
     # Read in last hour's metadata
-    if path.exists(lastHourMetadataPath):
-        with open(lastHourMetadataPath, "r") as jsonRead:
-            lastHourData = json.load(jsonRead)
-        # Add already-generated frames to alreadyPlottedFrames list
+    if path.exists(lastHourOneMinMetadataPath):
+        with open(lastHourOneMinMetadataPath, "r") as jsonRead:
+            lastHourOneMinData = json.load(jsonRead)
+        # Add already-generated frames to alreadyPlottedOneMinFrames list
         # The valid time gets converted first from an int to a string, then the string is trimmed to only include HHMM
-        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourData["productFrames"]]
+        [alreadyPlottedOneMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourOneMinData["productFrames"]]
     # Do the same thing for this hour's metadata
     thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(now, "%Y%m%d%H00")+".json")
     if path.exists(thisHourMetadataPath):
         with open(thisHourMetadataPath, "r") as jsonRead:
-            thisHourData = json.load(jsonRead)
-        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourData["productFrames"]]
+            thisHourOneMinData = json.load(jsonRead)
+        [alreadyPlottedOneMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourOneMinData["productFrames"]]
     # Plot every file in the input directory
-    for file in sorted(listdir(inputPath)):
+    inputDirContents = sorted(listdir(inputPath))
+    for file in inputDirContents:
         timeOfFileArr = file.split("_")
-        if timeOfFileArr[2] in alreadyPlottedFrames:
+        if timeOfFileArr[2] in alreadyPlottedOneMinFrames:
             continue
         timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
         if timeOfFile < now - timedelta(hours=2):
             remove(path.join(inputPath, file))
             continue
-        makeOneMinPlots(path.join(inputPath, file))
+        makeSourcePlots([path.join(inputPath, file)])
+    # Now let's do the same thing, but for 10-minute intervals of data
+    alreadyPlottedTenMinFrames = list()
+    lastHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
+    if path.exists(lastHourTenMinMetadataPath):
+        with open(lastHourTenMinMetadataPath, "r") as jsonRead:
+            lastHourTenMinData = json.load(jsonRead)
+        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourTenMinData]
+    thisHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(now, "%Y%m%d%H00")+".json")
+    if path.exists(thisHourMetadataPath):
+        with open(thisHourMetadataPath, "r") as jsonRead:
+            thisHourTenMinData = json.load(jsonRead)
+        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourTenMinData]
+    inputDirContents = sorted(listdir(inputPath))
+    for i in range(10, len(inputDirContents)):
+        lastFileInRange = inputDirContents[i]
+        timeOfLastFileArr = lastFileInRange.split("_")
+        if timeOfLastFileArr[2] in alreadyPlottedTenMinFrames:
+            continue
+        filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
+        makeSourcePlots(filesToPlot)
