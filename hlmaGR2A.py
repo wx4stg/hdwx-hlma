@@ -113,8 +113,8 @@ def makeOneMinPlots(lmaFilePath):
         timeOfPoint = vhfSourcePoint["pyDatetime"] - timeOfPlot
         # Convert that time to a float
         timeOfPoint = timeOfPoint.seconds + timeOfPoint.microseconds*0.000001
-        # There are 1276 icons in lightningicons.png, so based on the time scale, pick which one to use
-        scaleOfPoint = int(1274*timeOfPoint/60)+1
+        # There are 1020 icons in lightningicons.png, so based on the time scale, pick which one to use
+        scaleOfPoint = 1020 - int(1020*timeOfPoint/60) + 1
         # Add an icon for every vhf source
         placeFileString = placeFileString+"Icon: "+str(vhfSourcePoint["lat"])+", "+str(vhfSourcePoint["lon"])+", 000, 1, "+str(scaleOfPoint)+", "+dt.strftime(vhfSourcePoint["Datetime"].to_pydatetime(), "%H:%M:%S.%f")+r"\nAltitude (m): "+str(vhfSourcePoint["alt(m)"])+r"\nReduced chi^2: "+str(vhfSourcePoint["reduced chi^2"])+r"\nPower (dBW): "+str(vhfSourcePoint["P(dBW)"])+r"\nStation Count: "+str(vhfSourcePoint["Station Count"])+"\n"
     # Create a path object for GR2A placefile's productPath
