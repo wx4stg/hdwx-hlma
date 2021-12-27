@@ -29,6 +29,20 @@ def set_size(w, h, ax=None):
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
 
+def writeToStatus(stringToWrite):
+    print(stringToWrite)
+    stringToWrite = stringToWrite+"\n"
+    if path.exists(path.join(basePath, "status.txt")):
+        currentStatusFile = open(path.join(basePath, "status.txt"), "r")
+        currentStr = open(path.join(basePath, "status.txt"), "r").read()
+        currentStatusFile.close()
+    else:
+        currentStr = ""
+    if stringToWrite not in currentStr:
+        with open(path.join(basePath, "status.txt"), "a") as statw:
+            statw.write(stringToWrite)
+            statw.close()
+
 def writeJson(productID, productPath, runPathExtension, validTime):
     # If you have no idea what's going on or why I'm doing all this json stuff, 
     # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
@@ -158,16 +172,14 @@ def makeSourcePlots(lmaFilePaths):
         # Read in LMA data
         lmaData, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
     # Set parameters for 1 or 10 minute data
-    print("\n>>>>>>>>>>>>>>>>>>>>>>>>>>")
     if len(lmaFilePaths) == 1:
         gisProductID = 140
         staticProductID = 141
-        print("Plotting 1-minute data for "+startTimeOfPlot.strftime("%H:%M"))
+        writeToStatus("Plotting 1-minute data for "+startTimeOfPlot.strftime("%H:%M"))
     else:
         gisProductID = 143
         staticProductID = 144
-        print("Plotting 10-minute data for "+startTimeOfPlot.strftime("%H:%M"))
-    print(">>>>>>>>>>>>>>>>>>>>>>>>>>\n")
+        writeToStatus("Plotting 10-minute data for "+startTimeOfPlot.strftime("%H:%M"))
     # Create fig/ax
     fig = plt.figure()
     ax = plt.axes(projection=ccrs.epsg(3857))
