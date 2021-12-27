@@ -91,7 +91,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     with open(productDictJsonPath, "w") as jsonWrite:
         # Write the json. indent=4 gives pretty/human-readable format
         json.dump(productDict, jsonWrite, indent=4)
-
+    
     # Now we need to write a json for the product run in output/metadata/products/<productID>/<runTime>.json
     productRunDictPath = path.join(basePath, "output", "metadata", "products", str(productID), validTime.strftime("%Y%m%d%H00")+".json")
     # Create parent directory if it doesn't already exist.
@@ -315,12 +315,12 @@ if __name__ == "__main__":
     if path.exists(lastHourTenMinMetadataPath):
         with open(lastHourTenMinMetadataPath, "r") as jsonRead:
             lastHourTenMinData = json.load(jsonRead)
-        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourTenMinData]
+        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourTenMinData["productFrames"]]
     thisHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(now, "%Y%m%d%H00")+".json")
     if path.exists(thisHourTenMinMetadataPath):
         with open(thisHourTenMinMetadataPath, "r") as jsonRead:
             thisHourTenMinData = json.load(jsonRead)
-        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourTenMinData]
+        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourTenMinData["productFrames"]]
     inputDirContents = sorted(listdir(inputPath))
     for i in range(10, len(inputDirContents)):
         lastFileInRange = inputDirContents[i]
