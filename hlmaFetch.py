@@ -52,6 +52,6 @@ if __name__ == '__main__':
                             copyfile(path.join(hypPathCurrentHour, file), path.join(dataInputPath, file))
     for file in listdir(dataInputPath):
         timeOfFileArr = file.split("_")
-        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
+        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S").replace(minute=0)
         if timeOfFile < now - timedelta(hours=2):
             remove(path.join(dataInputPath, file))
