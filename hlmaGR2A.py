@@ -9,6 +9,7 @@ from datetime import datetime as dt, timedelta
 from pathlib import Path
 import json
 from shutil import copyfile
+import warnings
 
 def writeToStatus(stringToWrite):
     print(stringToWrite)
@@ -116,8 +117,11 @@ def writeJson(productID, productPath, validTime):
         json.dump(productTypeDict, jsonWrite, indent=4)
 
 def makeSrcPlacefile(lmaFilePaths):
-    # Read in LMA data
-    lmaData, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
+    # Silence error_bad_lines warning when reading in LMA data
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        # Read in LMA data
+        lmaData, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
     # Get time of the plot for metadata
     timeOfPlot = startTimeOfPlot + timedelta(minutes=len(lmaFilePaths))
     # Create a GR2Analyst compatible placefile
