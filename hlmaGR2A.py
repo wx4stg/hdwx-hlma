@@ -166,6 +166,9 @@ if __name__ == "__main__":
     inputPath = path.join(basePath, "lightningin")
     # List the files in the input directory
     filesToPlot = sorted(listdir(inputPath))
+    # If there are no files in the input dir, exit immediately
+    if len(filesToPlot) == 0:
+        exit()
     # Get the latest filename
     lastOneMinFile = filesToPlot[-1]
     # Get the time the last one-minute lma datafile as a datetime object

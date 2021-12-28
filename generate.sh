@@ -6,12 +6,17 @@ if [ ! -d output/ ]
 then
     mkdir output/
 fi
+if [ ! -d lightningin/ ]
+then
+    mkdir lightningin/
+fi
 
 if [ -f status.txt ]
 then
   echo "lockfile found, exiting"
   exit
 fi
+touch status.txt
 
 if [ -f ~/mambaforge/envs/HDWX/bin/python3 ]
 then
