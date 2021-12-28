@@ -302,9 +302,10 @@ if __name__ == "__main__":
     inputDirContents = sorted(listdir(inputPath))
     for file in inputDirContents:
         timeOfFileArr = file.split("_")
-        if timeOfFileArr[2] in alreadyPlottedOneMinFrames:
+        # The time in the filename is the *start*, but the time in the json is the end, so add one minute to the filename time
+        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
+        if timeOfFile.strftime("%H%M%S") in alreadyPlottedOneMinFrames:
             continue
-        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S")
         if timeOfFile < now - timedelta(hours=2):
             remove(path.join(inputPath, file))
             continue
@@ -325,7 +326,8 @@ if __name__ == "__main__":
     for i in range(10, len(inputDirContents)):
         lastFileInRange = inputDirContents[i]
         timeOfLastFileArr = lastFileInRange.split("_")
-        if timeOfLastFileArr[2] in alreadyPlottedTenMinFrames:
+        timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
+        if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedTenMinFrames:
             continue
         filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
         makeSourcePlots(filesToPlot)
