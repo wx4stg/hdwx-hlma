@@ -16,7 +16,7 @@ from datetime import datetime as dt, timedelta
 from pathlib import Path
 import json
 import warnings
-
+import logging
 
 axExtent = [-99.5, -91, 26, 33.5]
 def set_size(w, h, ax=None):
@@ -217,6 +217,7 @@ def makeSourcePlots(lmaFilePaths):
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
+    logging.captureWarnings(True)
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
