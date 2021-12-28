@@ -1,5 +1,26 @@
 #!/bin/bash
+# HLMA product generation script for next-gen HDWX
+# Created 27 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
-mkdir -p output/
+if [ ! -d output/ ]
+then
+    mkdir output/
+fi
 
-echo "I dont want this to be operationally run yet but I need to move this to hdwx-operational to test the data fetching. So I'm putting this dummy script here so as not to crash all.sh"
+if [ -f status.txt ]
+then
+  echo "lockfile found, exiting"
+  exit
+fi
+
+if [ -f ~/mambaforge/envs/HDWX/bin/python3 ]
+then
+    ~/mambaforge/envs/HDWX/bin/python3 hlmaGR2A.py
+    ~/mambaforge/envs/HDWX/bin/python3 hlmaPlot.py
+fi
+if [ -f ~/miniconda3/envs/HDWX/bin/python3 ]
+then
+    ~/mambaforge/envs/HDWX/bin/python3 hlmaGR2A.py
+    ~/mambaforge/envs/HDWX/bin/python3 hlmaPlot.py
+fi
+rm status.txt
