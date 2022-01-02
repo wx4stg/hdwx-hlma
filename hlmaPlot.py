@@ -188,7 +188,7 @@ def makeSourcePlots(lmaFilePaths):
     # Normalize the colormap for the number of minutes we're plotting
     norm = colors.Normalize(0, 60*len(lmaFilePaths))
     # We want to "mask out" points where the event chi^2 is greater than 2
-    chi2Mask = np.where(lmaData.event_chi2.data > 2.0, 1, 0)
+    chi2Mask = np.where(lmaData.event_chi2.data > 50.0, 1, 0)
     # Plot data
     vhfSct = ax.scatter(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), 3, np.ma.masked_array(times, mask=chi2Mask), transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", norm=norm)
     # Get a handle to a pixel

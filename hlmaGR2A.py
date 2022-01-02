@@ -135,15 +135,17 @@ def makeSrcPlacefile(lmaFilePaths):
         writeToStatus("Generating 10-minute placefile for "+timeOfPlot.strftime("%H:%M"))
     # Add all of our lightning points
     for lat, lon, time, alt, chi2, power, stations in zip(lmaData.event_latitude.data, lmaData.event_longitude.data, lmaData.event_time.data, lmaData.event_altitude.data, lmaData.event_chi2.data, lmaData.event_power.data, lmaData.event_stations.data):
-        time = pd.to_datetime(time)
-        # Get time elapsed since start of file range until the point
-        timeOfPoint = time - startTimeOfPlot
-        # Convert that time to a float
-        timeOfPoint = timeOfPoint.seconds + timeOfPoint.microseconds*0.000001
-        # There are 1020 icons in lightningicons.png, so based on the time scale, pick which one to use
-        scaleOfPoint = 1020 - int(1020*timeOfPoint/(60*len(lmaFilePaths))) + 1
-        # Add an icon for every vhf source
-        placeFileString = placeFileString+"Icon: "+str(lat)+", "+str(lon)+", 000, 1, "+str(scaleOfPoint)+", "+time.strftime("%H:%M:%S.%f")+r"\nAltitude (m): "+str(alt)+r"\nReduced chi^2: "+str(chi2)+r"\nPower (dBW): "+str(power)+r"\nStation Count: "+str(stations)+"\n"
+        # We want to filter out any source with a chi^2 over 50.
+        if chi2 <= 50:
+            time = pd.to_datetime(time)
+            # Get time elapsed since start of file range until the point
+            timeOfPoint = time - startTimeOfPlot
+            # Convert that time to a float
+            timeOfPoint = timeOfPoint.seconds + timeOfPoint.microseconds*0.000001
+            # There are 1020 icons in lightningicons.png, so based on the time scale, pick which one to use
+            scaleOfPoint = 1020 - int(1020*timeOfPoint/(60*len(lmaFilePaths))) + 1
+            # Add an icon for every vhf source
+            placeFileString = placeFileString+"Icon: "+str(lat)+", "+str(lon)+", 000, 1, "+str(scaleOfPoint)+", "+time.strftime("%H:%M:%S.%f")+r"\nAltitude (m): "+str(alt)+r"\nReduced chi^2: "+str(chi2)+r"\nPower (dBW): "+str(power)+r"\nStation Count: "+str(stations)+"\n"
     # Create a path object for GR2A placefile's productPath
     gr2aProductPath = path.join("gr2a", "")
     # Target path for gr2a placefiles is output/gr2a/1min-src.txt
