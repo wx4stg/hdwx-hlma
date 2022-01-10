@@ -18,14 +18,7 @@ then
 fi
 touch status.txt
 
-if [ -f ~/mambaforge/envs/HDWX/bin/python3 ]
-then
-    ~/mambaforge/envs/HDWX/bin/python3 hlmaGR2A.py
-    ~/mambaforge/envs/HDWX/bin/python3 hlmaPlot.py
-fi
-if [ -f ~/miniconda3/envs/HDWX/bin/python3 ]
-then
-    ~/mambaforge/envs/HDWX/bin/python3 hlmaGR2A.py
-    ~/mambaforge/envs/HDWX/bin/python3 hlmaPlot.py
-fi
+$CONDA_PREFIX/bin/python3 hlmaGR2A.py
+$CONDA_PREFIX/bin/python3 hlmaPlot.py
+
 rm status.txt
