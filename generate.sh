@@ -20,5 +20,4 @@ touch status.txt
 
 $CONDA_PREFIX/bin/python3 hlmaGR2A.py
 $CONDA_PREFIX/bin/python3 hlmaPlot.py
-
-rm status.txt
+$CONDA_PREFIX/bin/python3 cleanup.py
