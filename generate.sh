@@ -18,6 +18,16 @@ then
 fi
 touch status.txt
 
-$CONDA_PREFIX/bin/python3 hlmaGR2A.py
-$CONDA_PREFIX/bin/python3 hlmaPlot.py
-$CONDA_PREFIX/bin/python3 cleanup.py
+if [ -f ~/mambaforge/envs/HDWX/bin/python3 ]
+then
+    ~/mambaforge/envs/HDWX/bin/python3 hlmaGR2A.py
+    ~/mambaforge/envs/HDWX/bin/python3 hlmaPlot.py
+    ~/mambaforge/envs/HDWX/bin/python3 cleanup.py
+fi
+if [ -f ~/miniconda3/envs/HDWX/bin/python3 ]
+then
+    ~/miniconda3/envs/HDWX/bin/python3 hlmaGR2A.py
+    ~/miniconda3/envs/HDWX/bin/python3 hlmaPlot.py
+    ~/miniconda3/envs/HDWX/bin/python3 cleanup.py
+fi
+rm status.txt
