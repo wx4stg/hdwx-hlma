@@ -4,6 +4,8 @@
 
 from os import path, listdir, remove
 from pyxlma.lmalib.io import read as lma_read
+from pyxlma.lmalib.flash.cluster import cluster_flashes
+from pyxlma.lmalib.grid import  create_regular_grid, assign_regular_bins, events_to_grid
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimage
 from matplotlib import colors
@@ -16,7 +18,6 @@ from datetime import datetime as dt, timedelta
 from pathlib import Path
 import json
 import warnings
-import logging
 
 axExtent = [-99.5, -91, 26, 33.5]
 def set_size(w, h, ax=None):
@@ -47,30 +48,43 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     # If you have no idea what's going on or why I'm doing all this json stuff, 
     # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
     # Get description and GIS based on productID
+    productDesc = ""
+    isGIS = False
+    gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+    fileExtension = "png"
+    productFrameCount = 60
     if productID == 140:
         productDesc = "HLMA VHF 1-minute Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        fileExtension = "png"
-        productFrameCount = 60
     elif productID == 141:
         productDesc = "HLMA VHF 1-minute Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
-        fileExtension = "png"
-        productFrameCount = 60
     elif productID == 143:
         productDesc = "HLMA VHF 10-minute Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        fileExtension = "png"
-        productFrameCount = 60
     elif productID == 144:
         productDesc = "HLMA VHF 10-minute Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
-        fileExtension = "png"
-        productFrameCount = 60
+    elif productID == 146:
+        productDesc = "HLMA 1-minute Flash Extent Density"
+        isGIS = True
+        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+    elif productID == 147:
+        productDesc = "HLMA 1-minute Flash Extent Density"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 148:
+        productDesc = "HLMA 10-minute Flash Extent Density"
+        isGIS = True
+        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+    elif productID == 149:
+        productDesc = "HLMA 10-minute Flash Extent Density"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
     # Create dictionary for the product. 
@@ -79,7 +93,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         "productDescription" : productDesc,
         "productPath" : productPath,
         "productReloadTime" : 60,
-        "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
+        "lastReloadTime" : int(publishTime.strftime("%Y%m%d%H%M")),
         "isForecast" : True,
         "isGIS" : isGIS,
         "fileExtension" : fileExtension
@@ -165,6 +179,152 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     with open(productTypeDictPath, "w") as jsonWrite:
         json.dump(productTypeDict, jsonWrite, indent=4)
 
+def makeFlashPlots(lmaFilePaths):
+    # Silence error_bad_lines warning when reading in LMA data
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        # Read in LMA data
+        lmaData, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
+    numMins = 0
+    if "0060.dat" in lmaFilePaths[0]:
+        numMins = 1
+    else:
+        numMins = 10
+    elapsedTimeOfData = numMins*len(lmaFilePaths)
+    if elapsedTimeOfData == 1:
+        gisProductID = 146
+        staticProductID = 147
+        writeToStatus("Plotting 1-minute flash-extent data for "+startTimeOfPlot.strftime("%H:%M"))
+    elif elapsedTimeOfData == 10:
+        gisProductID = 148
+        staticProductID = 149
+        writeToStatus("Plotting 10-minute flash-extent data for "+startTimeOfPlot.strftime("%H:%M"))
+    # Get end time for grid creation
+    timeOfPlot = startTimeOfPlot + numMins*timedelta(minutes=len(lmaFilePaths))
+    dttuple = (np.datetime64(startTimeOfPlot), np.datetime64(timeOfPlot))
+    grid_dt = np.asarray(60, dtype='m8[s]')
+    grid_t0 = np.asarray(dttuple[0]).astype('datetime64[ns]')
+    grid_t1 = np.asarray(dttuple[1]).astype('datetime64[ns]')
+    time_range = (grid_t0, grid_t1+grid_dt, grid_dt)
+    # We only want events with chi^2 less than 1
+    lmaData = lmaData[{"number_of_events":(lmaData.event_chi2 <= 1.0)}]
+    lmaData = cluster_flashes(lmaData)
+    lat_range = (axExtent[2], axExtent[3], 0.025)
+    lon_range = (axExtent[0], axExtent[1], 0.025)
+    alt_range = (0, 18e3, 1.0e3)
+    grid_edge_ranges ={
+        'grid_latitude_edge':lat_range,
+        'grid_longitude_edge':lon_range,
+        'grid_altitude_edge':alt_range,
+        'grid_time_edge':time_range,
+    }
+    grid_center_names ={
+        'grid_latitude_edge':'grid_latitude',
+        'grid_longitude_edge':'grid_longitude',
+        'grid_altitude_edge':'grid_altitude',
+        'grid_time_edge':'grid_time',
+    }
+    event_coord_names = {
+        'event_latitude':'grid_latitude_edge',
+        'event_longitude':'grid_longitude_edge',
+        'event_altitude':'grid_altitude_edge',
+        'event_time':'grid_time_edge',
+    }
+    grid_ds = create_regular_grid(grid_edge_ranges, grid_center_names)
+    ds_ev = assign_regular_bins(grid_ds, lmaData, event_coord_names, pixel_id_var="event_pixel_id", append_indices=True)
+    grid_spatial_coords=['grid_time', None, 'grid_latitude', 'grid_longitude']
+    event_spatial_vars = ('event_altitude', 'event_latitude', 'event_longitude')
+    griddedLmaData = events_to_grid(ds_ev, grid_ds, min_points_per_flash=3, pixel_id_var="event_pixel_id", event_spatial_vars=event_spatial_vars, grid_spatial_coords=grid_spatial_coords)
+    fig = plt.figure()
+    ax = plt.axes(projection=ccrs.epsg(3857))
+    griddedLmaData = griddedLmaData.isel(grid_time=0)
+    try:
+        flashContours = ax.contourf(griddedLmaData.flash_extent_density.grid_longitude, griddedLmaData.flash_extent_density.grid_latitude, griddedLmaData.flash_extent_density.data, levels=np.arange(1, 14.01, 0.1), cmap="plasma", transform=ccrs.PlateCarree(), zorder=4)
+    except Exception as e:
+        if "GEOSContains" in str(e):
+            return
+        else:
+            raise e
+    # Get a handle to a pixel
+    px = 1/plt.rcParams["figure.dpi"]
+    # Make the GIS plot have a decent resolution. This wont end up being exactly 1920 by 1080 
+    # as it's overridden by the next line "set_extent", but should improve the resolution enough
+    set_size(1920*px, 1080*px, ax=ax)
+    # Now we set the extent to the coordinates we want
+    ax.set_extent(axExtent, crs=ccrs.PlateCarree())
+    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+    # Use os.path to preserve Windows compatibility
+    gisProductPath = path.join("gisproducts", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
+    # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
+    runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
+    # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
+    gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
+    # Create target directory if it doesn't already exist
+    Path(path.dirname(gisSavePath)).mkdir(parents=True, exist_ok=True)
+    # Get the exact extent of just the axes without the matplotlib auto-generated whitespace
+    extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
+    # save the figure, but trim the whitespace
+    # we do this because including the whitespace would make the data not align to the GIS information in the metadata
+    fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
+    # Write metadata for the product
+    writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
+    # For the "static"/non-GIS/opaque image, add county/state/coastline borders
+    ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
+    ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
+    ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
+    # Move the data axes to maximize the amount of space available to it
+    ax.set_position([0.05, 0.11, .9, .87])
+    # Create a "colorbar axes". We want it to be beneath the plot, under the far left third.
+    cbax = fig.add_axes([0, 0, (ax.get_position().width/3), .025])
+    fig.colorbar(flashContours, cax=cbax, orientation="horizontal", label="Flash Extent Density", extend="max").set_ticks(np.arange(1, 14.01, 1))
+    cbax.set_position([0.05, ax.get_position().y0-.01-cbax.get_position().height, cbax.get_position().width, cbax.get_position().height])
+    # Create a "title axes". We want it to be one third the width of the data axes, height will be handled by matplotlib automatically,
+    # and we'll worry about positioning later
+    tax = fig.add_axes([0,0,(ax.get_position().width/3),.05])
+    # Add a descriptive title
+    tax.text(0.5, 0.5, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%M")+"-"+timeOfPlot.strftime("%H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
+    # add credit
+    tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
+    # Turn off the axis spines and ticks to give the appearance of floating text
+    # we can't use 'tax.axis("off")' here as that would hide the xlabel
+    plt.setp(tax.spines.values(), visible=False)
+    tax.tick_params(left=False, labelleft=False)
+    tax.tick_params(bottom=False, labelbottom=False)
+    # Now we handle positioning, we want the plot to be centered below the data axes, as close to the bottom of the figure as possible
+    # without cutting off the xlabel, and retain the original width/height
+    tax.set_position([(ax.get_position().width/2)-(tax.get_position().width/2)+ax.get_position().x0,ax.get_position().y0-.01-tax.get_position().height,tax.get_position().width,tax.get_position().height], which="both")
+    # Add a "logo axes" to display the TAMU ATMO logo. Again, one third the width of the data axes.
+    lax = fig.add_axes([0,0,(ax.get_position().width/3),1])
+    # The logo axes must have the same aspect ratio as the image we're trying to display or else the image will be stretched/compressed
+    lax.set_aspect(2821/11071)
+    # turn off the axis
+    lax.axis("off")
+    # turn off axis spines
+    plt.setp(lax.spines.values(), visible=False)
+    # read in the image
+    atmoLogo = mpimage.imread("assets/atmoLogo.png")
+    # show the image
+    lax.imshow(atmoLogo)
+    # We want the logo axes to be all the way to the right, and as low as possible without cutting anything off
+    lax.set_position([.95-lax.get_position().width, ax.get_position().y0-.01-lax.get_position().height, lax.get_position().width, lax.get_position().height], which="both")
+    # Make sure image is opaque
+    fig.set_facecolor("white")
+    # Set size to 1080p, resolution of the weather center monitors
+    fig.set_size_inches(1920*px, 1080*px)
+    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+    staticProductPath = path.join("products", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
+    # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
+    staticSavePath = path.join(basePath, "output", staticProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
+    # Create save directory if it doesn't already exist
+    Path(path.dirname(staticSavePath)).mkdir(parents=True, exist_ok=True)
+    # Write the image
+    fig.savefig(staticSavePath)
+    # Write metadata for the product
+    writeJson(staticProductID, staticProductPath, runPathExt, timeOfPlot)
+    # Close figure when done (memory management)
+    plt.close(fig)
+    
+
 def makeSourcePlots(lmaFilePaths):
     # Silence error_bad_lines warning when reading in LMA data
     with warnings.catch_warnings():
@@ -175,11 +335,11 @@ def makeSourcePlots(lmaFilePaths):
     if len(lmaFilePaths) == 1:
         gisProductID = 140
         staticProductID = 141
-        writeToStatus("Plotting 1-minute data for "+startTimeOfPlot.strftime("%H:%M"))
+        writeToStatus("Plotting 1-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
     else:
         gisProductID = 143
         staticProductID = 144
-        writeToStatus("Plotting 10-minute data for "+startTimeOfPlot.strftime("%H:%M"))
+        writeToStatus("Plotting 10-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
     # Create fig/ax
     fig = plt.figure()
     ax = plt.axes(projection=ccrs.epsg(3857))
@@ -217,7 +377,6 @@ def makeSourcePlots(lmaFilePaths):
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
-    logging.captureWarnings(True)
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -311,6 +470,7 @@ if __name__ == "__main__":
             remove(path.join(inputPath, file))
             continue
         makeSourcePlots([path.join(inputPath, file)])
+        makeFlashPlots([path.join(inputPath, file)])
     # Now let's do the same thing, but for 10-minute intervals of data
     alreadyPlottedTenMinFrames = list()
     lastHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
@@ -332,3 +492,4 @@ if __name__ == "__main__":
             continue
         filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
         makeSourcePlots(filesToPlot)
+        makeFlashPlots(filesToPlot)
