@@ -30,4 +30,3 @@ then
     ~/miniconda3/envs/HDWX/bin/python3 hlmaPlot.py
     ~/miniconda3/envs/HDWX/bin/python3 cleanup.py
 fi
-rm status.txt
