@@ -44,7 +44,7 @@ def writeJson(productID, productPath, validTime):
         "productPath" : productPath,
         "productReloadTime" : 60,
         "lastReloadTime" : int(publishTime.strftime("%Y%m%d%H%M")),
-        "isForecast" : True,
+        "isForecast" : False,
         "isGIS" : False,
         "fileExtension" : "php"
     }
