@@ -17,16 +17,22 @@ then
   exit
 fi
 touch status.txt
-
-if [ -f ~/mambaforge/envs/HDWX/bin/python3 ]
+if [ -f ../config.txt ]
 then
-    ~/mambaforge/envs/HDWX/bin/python3 hlmaGR2A.py
-    ~/mambaforge/envs/HDWX/bin/python3 hlmaPlot.py
-    ~/mambaforge/envs/HDWX/bin/python3 cleanup.py
+    source ../config.txt
+else
+    condaEnvName="HDWX"
 fi
-if [ -f ~/miniconda3/envs/HDWX/bin/python3 ]
+
+if [ -f ~/mambaforge/envs/$condaEnvName/bin/python3 ]
 then
-    ~/miniconda3/envs/HDWX/bin/python3 hlmaGR2A.py
-    ~/miniconda3/envs/HDWX/bin/python3 hlmaPlot.py
-    ~/miniconda3/envs/HDWX/bin/python3 cleanup.py
+    ~/mambaforge/envs/$condaEnvName/bin/python3 hlmaGR2A.py
+    ~/mambaforge/envs/$condaEnvName/bin/python3 hlmaPlot.py
+    ~/mambaforge/envs/$condaEnvName/bin/python3 cleanup.py
+fi
+if [ -f ~/miniconda3/envs/$condaEnvName/bin/python3 ]
+then
+    ~/miniconda3/envs/$condaEnvName/bin/python3 hlmaGR2A.py
+    ~/miniconda3/envs/$condaEnvName/bin/python3 hlmaPlot.py
+    ~/miniconda3/envs/$condaEnvName/bin/python3 cleanup.py
 fi
