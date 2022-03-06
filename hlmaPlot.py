@@ -93,7 +93,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         "productDescription" : productDesc,
         "productPath" : productPath,
         "productReloadTime" : 60,
-        "lastReloadTime" : int(publishTime.strftime("%Y%m%d%H%M")),
+        "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
         "isForecast" : False,
         "isGIS" : isGIS,
         "fileExtension" : fileExtension
@@ -133,7 +133,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
                 "fhour" : 0, # forecast hour is 0 for non-forecasts
                 "filename" : str(frameMin)+".png",
                 "gisInfo" : gisInfo,
-                "valid" : int(validTime.strftime("%Y%m%d%H00"))+frameMin
+                "valid" : str(int(validTime.strftime("%Y%m%d%H00"))+frameMin)
             }
             # If this dictionary isn't already in the framesArray, add it
             if frmDict not in framesArray:
@@ -144,7 +144,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         "runName" : validTime.strftime("%d %b %Y %HZ"),
         "availableFrameCount" : len(framesArray),
         "totalFrameCount" : productFrameCount,
-        "productFrames" : sorted(framesArray, key=lambda dict: dict["valid"]) # productFramesArray, sorted by increasing valid Time
+        "productFrames" : sorted(framesArray, key=lambda dict: int(dict["valid"])) # productFramesArray, sorted by increasing valid Time
     }
     # Write productRun dictionary to json
     with open(productRunDictPath, "w") as jsonWrite:

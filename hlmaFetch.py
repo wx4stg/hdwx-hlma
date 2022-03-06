@@ -35,14 +35,14 @@ if __name__ == '__main__':
     dataInputPath = path.join(basePath, "lightningin")
     Path(dataInputPath).mkdir(parents=True, exist_ok=True)
     for min in range(0, 60):
-        if (lastHourInt + min) not in generatedFrames:
+        if str(lastHourInt + min) not in generatedFrames:
             hypPathLastHour = path.join(lmaDataBasePath, dt.strftime(oneHourAgo, "%Y")[-2:]+dt.strftime(oneHourAgo, "%m%d"), dt.strftime(oneHourAgo ,"%H"), str(f'{min:02}'))
             if path.exists(hypPathLastHour):
                 contentsOfLastHour = listdir(hypPathLastHour)
                 for file in contentsOfLastHour:
                     if file.endswith(".dat.gz"):
                         copyfile(path.join(hypPathLastHour, file), path.join(dataInputPath, file))
-        if (currentHourInt + min) not in generatedFrames:
+        if str(currentHourInt + min) not in generatedFrames:
             if (currentHourInt + min) < currentTimeInt:
                 hypPathCurrentHour = path.join(lmaDataBasePath, dt.strftime(now, "%Y")[-2:]+dt.strftime(now, "%m%d"), dt.strftime(now ,"%H"), str(f'{min:02}'))
                 if path.exists(hypPathCurrentHour):

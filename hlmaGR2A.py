@@ -43,7 +43,7 @@ def writeJson(productID, productPath, validTime):
         "productDescription" : productDesc,
         "productPath" : productPath,
         "productReloadTime" : 60,
-        "lastReloadTime" : int(publishTime.strftime("%Y%m%d%H%M")),
+        "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
         "isForecast" : False,
         "isGIS" : False,
         "fileExtension" : "php"
@@ -74,7 +74,7 @@ def writeJson(productID, productPath, validTime):
         "fhour" : 0,
         "filename" : filename,
         "gisInfo" : ["0,0", "0,0"],
-        "valid" : int(validTime.strftime("%Y%m%d%H%M"))
+        "valid" : validTime.strftime("%Y%m%d%H%M")
     }]
     # Create a dictionary for the run
     productRunDict = {
@@ -190,7 +190,7 @@ if __name__ == "__main__":
         with open(oneMinMetadataPath, "r") as jsonRead:
             lastOneMinMetadata = json.load(jsonRead)
         # If the latest lma input file is newer than the last generated placefile, generate a new one
-        if lastOneMinMetadata["productFrames"][0]["valid"] < int(lastOneMinFileDt.strftime("%Y%m%d%H%M")):
+        if int(lastOneMinMetadata["productFrames"][0]["valid"]) < int(lastOneMinFileDt.strftime("%Y%m%d%H%M")):
             makeSrcPlacefile([path.join(inputPath, lastOneMinFile)])
     else:
         # If the json doesn't exist, then we definitely need to plot the latest file.
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     if path.exists(tenMinMetadataPath):
         with open(tenMinMetadataPath, "r") as jsonRead:
             lastTenMinMetadata = json.load(jsonRead)
-        if lastTenMinMetadata["productFrames"][0]["valid"] < int(lastOneMinFileDt.strftime("%Y%m%d%H%M")):
+        if int(lastTenMinMetadata["productFrames"][0]["valid"]) < int(lastOneMinFileDt.strftime("%Y%m%d%H%M")):
             makeSrcPlacefile([path.join(inputPath, tenMinFile) for tenMinFile in lastTenMinsFiles])
     else:
         makeSrcPlacefile([path.join(inputPath, tenMinFile) for tenMinFile in lastTenMinsFiles])
