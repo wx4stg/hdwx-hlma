@@ -24,15 +24,9 @@ else
     condaEnvName="HDWX"
 fi
 
-if [ -f ~/mambaforge/envs/$condaEnvName/bin/python3 ]
+if [ -f $condaRootPath/envs/$condaEnvName/bin/python3 ]
 then
-    ~/mambaforge/envs/$condaEnvName/bin/python3 hlmaGR2A.py
-    ~/mambaforge/envs/$condaEnvName/bin/python3 hlmaPlot.py
-    ~/mambaforge/envs/$condaEnvName/bin/python3 cleanup.py
-fi
-if [ -f ~/miniconda3/envs/$condaEnvName/bin/python3 ]
-then
-    ~/miniconda3/envs/$condaEnvName/bin/python3 hlmaGR2A.py
-    ~/miniconda3/envs/$condaEnvName/bin/python3 hlmaPlot.py
-    ~/miniconda3/envs/$condaEnvName/bin/python3 cleanup.py
+    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaGR2A.py
+    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaPlot.py
+    $condaRootPath/envs/$condaEnvName/bin/python3 cleanup.py
 fi
