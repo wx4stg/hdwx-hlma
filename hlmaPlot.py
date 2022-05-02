@@ -12,12 +12,14 @@ from matplotlib import colors
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
 import numpy as np
-from metpy.plots import USCOUNTIES
+from metpy.plots import USCOUNTIES, ctables
 import pandas as pd
 from datetime import datetime as dt, timedelta
 from pathlib import Path
 import json
 import warnings
+import radarDataFetch
+import xarray as xr
 
 axExtent = [-99.5, -91, 26, 33.5]
 def set_size(w, h, ax=None):
@@ -83,6 +85,22 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
     elif productID == 149:
         productDesc = "HLMA 10-minute Flash Extent Density"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 150:
+        productDesc = "HLMA VHF 1-minute Sources + ADRAD Reflectivity"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 151:
+        productDesc = "HLMA VHF 1-minute Sources + MRMS Reflectivity At Lowest Altitude"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 152:
+        productDesc = "HLMA 1-minute Flash Extent Density + ADRAD Reflectivity"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 153:
+        productDesc = "HLMA 1-minute Flash Extent Density + MRMS Reflectivity At Lowest Altitude"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
     # For prettyness' sake, make all the publishTimes the same
@@ -180,6 +198,38 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         json.dump(productTypeDict, jsonWrite, indent=4)
     chmod(productTypeDictPath, 0o644)
 
+def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
+    mrmsGribName = radarDataFetch.fetchRadarClosestToTime(time)
+    if ".grib" in mrmsGribName:
+        datasetFilePath = path.join(basePath, "radarInput", mrmsGribName)
+        radarDS = xr.open_dataset(datasetFilePath)
+        radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
+        norm, cmap = ctables.registry.get_with_steps("NWSReflectivity", 5, 5)
+        cmap.set_under("#00000000")
+        cmap.set_over("black")
+        rdr = ax.pcolormesh(radarDS.longitude, radarDS.latitude, radarData, cmap=cmap, norm=norm, transform=ccrs.PlateCarree(), zorder=5, alpha=0.5)
+        cbax.set_position([.01,0.05,(ax.get_position().width/3),.01])
+        cbax.xaxis.set_ticks_position("top")
+        cbax.tick_params(axis="x", labelsize=9)
+        cbax.xaxis.set_label_position("top")
+        taxtext.set_text(taxtext.get_text().replace("Houston", "MRMS LL Reflectivity + Houston"))
+        cbaxRdr = fig.add_axes([.01,0.035,(ax.get_position().width/3),.01])
+        fig.colorbar(rdr, cax=cbaxRdr, orientation="horizontal", extend="max")
+        cbaxRdr.set_xlabel("Reflectivity (dBZ)", fontsize=9, labelpad=1)
+        cbaxRdr.tick_params(axis="x", labelsize=9)
+        if productID == 151:
+            lightType = "src"
+            cbax.set_xlabel("Seconds after "+(time - timedelta(minutes=1)).strftime("%-d %b %Y %H%MZ"))
+        elif productID == 153:
+            lightType = "flash"
+            cbax.set_xlabel("Flash Extent Density (Flashes/km^2/min)", fontsize=9)
+        productPath = path.join("products", "hlma", "mrms-"+lightType)
+        runPathExtension = path.join(time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"), time.strftime("%H")+"00")
+        Path(path.join(basePath, "output", productPath, runPathExtension)).mkdir(parents=True, exist_ok=True)
+        fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
+        writeJson(productID, productPath, runPathExtension, time)
+
+
 def makeFlashPlots(lmaFilePaths):
     # Silence error_bad_lines warning when reading in LMA data
     with warnings.catch_warnings():
@@ -273,43 +323,25 @@ def makeFlashPlots(lmaFilePaths):
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
+    # Reduce whitespace around data axes
+    ax.set_box_aspect(9/16)
     # Move the data axes to maximize the amount of space available to it
     ax.set_position([0.05, 0.11, .9, .87])
-    # Create a "colorbar axes". We want it to be beneath the plot, under the far left third.
-    cbax = fig.add_axes([0, 0, (ax.get_position().width/3), .025])
-    fig.colorbar(flashContours, cax=cbax, orientation="horizontal", label="Flash Extent Density", extend="max").set_ticks(np.arange(1, 14.01, 1))
-    cbax.set_position([0.05, ax.get_position().y0-.01-cbax.get_position().height, cbax.get_position().width, cbax.get_position().height])
-    # Create a "title axes". We want it to be one third the width of the data axes, height will be handled by matplotlib automatically,
-    # and we'll worry about positioning later
-    tax = fig.add_axes([0,0,(ax.get_position().width/3),.05])
-    # Add a descriptive title
-    tax.text(0.5, 0.5, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%M")+"-"+timeOfPlot.strftime("%H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
-    # add credit
+    cbax = fig.add_axes([.01,0.075,(ax.get_position().width/3),.02])
+    fig.colorbar(flashContours, cax=cbax, orientation="horizontal", label="Flash Extent Density (Flashes/km^2/min)", extend="max").set_ticks(np.arange(1, 14.01, 1))
+    tax = fig.add_axes([ax.get_position().x0+cbax.get_position().width+.01,0.045,(ax.get_position().width/3),.05])
+    title = tax.text(0.5, 0.5, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%M")+"-"+timeOfPlot.strftime("%H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
     tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
-    # Turn off the axis spines and ticks to give the appearance of floating text
-    # we can't use 'tax.axis("off")' here as that would hide the xlabel
     plt.setp(tax.spines.values(), visible=False)
     tax.tick_params(left=False, labelleft=False)
     tax.tick_params(bottom=False, labelbottom=False)
-    # Now we handle positioning, we want the plot to be centered below the data axes, as close to the bottom of the figure as possible
-    # without cutting off the xlabel, and retain the original width/height
-    tax.set_position([(ax.get_position().width/2)-(tax.get_position().width/2)+ax.get_position().x0,ax.get_position().y0-.01-tax.get_position().height,tax.get_position().width,tax.get_position().height], which="both")
-    # Add a "logo axes" to display the TAMU ATMO logo. Again, one third the width of the data axes.
-    lax = fig.add_axes([0,0,(ax.get_position().width/3),1])
-    # The logo axes must have the same aspect ratio as the image we're trying to display or else the image will be stretched/compressed
+    lax = fig.add_axes([(.99-(ax.get_position().width/3)),0,(ax.get_position().width/3),.1])
     lax.set_aspect(2821/11071)
-    # turn off the axis
     lax.axis("off")
-    # turn off axis spines
     plt.setp(lax.spines.values(), visible=False)
-    # read in the image
-    atmoLogo = mpimage.imread("assets/atmoLogo.png")
-    # show the image
+    atmoLogo = mpimage.imread(path.join(basePath, "assets", "atmoLogo.png"))
     lax.imshow(atmoLogo)
-    # We want the logo axes to be all the way to the right, and as low as possible without cutting anything off
-    lax.set_position([.95-lax.get_position().width, ax.get_position().y0-.01-lax.get_position().height, lax.get_position().width, lax.get_position().height], which="both")
-    # Make sure image is opaque
-    fig.set_facecolor("white")
+    ax.set_position([.005, cbax.get_position().y0+cbax.get_position().height+.005, .99, (.99-(cbax.get_position().y0+cbax.get_position().height))])
     # Set size to 1080p, resolution of the weather center monitors
     fig.set_size_inches(1920*px, 1080*px)
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
@@ -322,6 +354,9 @@ def makeFlashPlots(lmaFilePaths):
     fig.savefig(staticSavePath)
     # Write metadata for the product
     writeJson(staticProductID, staticProductPath, runPathExt, timeOfPlot)
+    if len(lmaFilePaths) == 1:
+        # Now we can add MRMS to the figure
+        addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 153)
     # Close figure when done (memory management)
     plt.close(fig)
     
@@ -381,43 +416,25 @@ def makeSourcePlots(lmaFilePaths):
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
+    # Reduce whitespace around data axes
+    ax.set_box_aspect(9/16)
     # Move the data axes to maximize the amount of space available to it
     ax.set_position([0.05, 0.11, .9, .87])
-    # Create a "colorbar axes". We want it to be beneath the plot, under the far left third.
-    cbax = fig.add_axes([0, 0, (ax.get_position().width/3), .025])
+    cbax = fig.add_axes([.01,0.075,(ax.get_position().width/3),.02])
     fig.colorbar(vhfSct, cax=cbax, orientation="horizontal", label="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
-    cbax.set_position([0.05, ax.get_position().y0-.01-cbax.get_position().height, cbax.get_position().width, cbax.get_position().height])
-    # Create a "title axes". We want it to be one third the width of the data axes, height will be handled by matplotlib automatically,
-    # and we'll worry about positioning later
-    tax = fig.add_axes([0,0,(ax.get_position().width/3),.05])
-    # Add a descriptive title
-    tax.text(0.5, 0.5, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
-    # add credit
+    tax = fig.add_axes([ax.get_position().x0+cbax.get_position().width+.01,0.045,(ax.get_position().width/3),.05])
+    title = tax.text(0.5, 0.5, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
     tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
-    # Turn off the axis spines and ticks to give the appearance of floating text
-    # we can't use 'tax.axis("off")' here as that would hide the xlabel
     plt.setp(tax.spines.values(), visible=False)
     tax.tick_params(left=False, labelleft=False)
     tax.tick_params(bottom=False, labelbottom=False)
-    # Now we handle positioning, we want the plot to be centered below the data axes, as close to the bottom of the figure as possible
-    # without cutting off the xlabel, and retain the original width/height
-    tax.set_position([(ax.get_position().width/2)-(tax.get_position().width/2)+ax.get_position().x0,ax.get_position().y0-.01-tax.get_position().height,tax.get_position().width,tax.get_position().height], which="both")
-    # Add a "logo axes" to display the TAMU ATMO logo. Again, one third the width of the data axes.
-    lax = fig.add_axes([0,0,(ax.get_position().width/3),1])
-    # The logo axes must have the same aspect ratio as the image we're trying to display or else the image will be stretched/compressed
+    lax = fig.add_axes([(.99-(ax.get_position().width/3)),0,(ax.get_position().width/3),.1])
     lax.set_aspect(2821/11071)
-    # turn off the axis
     lax.axis("off")
-    # turn off axis spines
     plt.setp(lax.spines.values(), visible=False)
-    # read in the image
-    atmoLogo = mpimage.imread("assets/atmoLogo.png")
-    # show the image
+    atmoLogo = mpimage.imread(path.join(basePath, "assets", "atmoLogo.png"))
     lax.imshow(atmoLogo)
-    # We want the logo axes to be all the way to the right, and as low as possible without cutting anything off
-    lax.set_position([.95-lax.get_position().width, ax.get_position().y0-.01-lax.get_position().height, lax.get_position().width, lax.get_position().height], which="both")
-    # Make sure image is opaque
-    fig.set_facecolor("white")
+    ax.set_position([.005, cbax.get_position().y0+cbax.get_position().height+.005, .99, (.99-(cbax.get_position().y0+cbax.get_position().height))])
     # Set size to 1080p, resolution of the weather center monitors
     fig.set_size_inches(1920*px, 1080*px)
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
@@ -430,6 +447,9 @@ def makeSourcePlots(lmaFilePaths):
     fig.savefig(staticSavePath)
     # Write metadata for the product
     writeJson(staticProductID, staticProductPath, runPathExt, timeOfPlot)
+    if len(lmaFilePaths) == 1:
+        # Now we can add MRMS to the figure
+        addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 151)
     # Close figure when done (memory management)
     plt.close(fig)
 
