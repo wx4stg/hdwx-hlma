@@ -4,6 +4,7 @@
 
 from datetime import datetime as dt, timedelta
 from os import path, walk, remove
+from shutil import rmtree
 
 def writeToStatus(stringToWrite):
     print(stringToWrite)
@@ -30,3 +31,4 @@ if __name__ == "__main__":
                     remove(filepath)
                     writeToStatus(filepath+" deleted.")
     remove(path.join(basePath, "status.txt"))
+    rmtree(path.join(basePath, "radarInput"))

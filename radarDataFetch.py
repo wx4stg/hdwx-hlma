@@ -15,6 +15,8 @@ basePath = path.realpath(path.dirname(__file__))
 
 def downloadFile(fileName):
     output = path.join(basePath, "radarInput", fileName)
+    if path.exists(path.join(basePath, "radarInput", fileName.replace(".gz", ""))):
+        return output.replace(".gz", "")
     print("Downloading "+fileName)
     urlToFetch = "https://mrms.ncep.noaa.gov/data/2D/ReflectivityAtLowestAltitude/"+fileName
     mrmsData = requests.get(urlToFetch)

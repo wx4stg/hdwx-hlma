@@ -3,6 +3,7 @@
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 from os import path, listdir, remove, chmod
+import sys
 from pyxlma.lmalib.io import read as lma_read
 from pyxlma.lmalib.flash.cluster import cluster_flashes
 from pyxlma.lmalib.grid import  create_regular_grid, assign_regular_bins, events_to_grid
@@ -22,6 +23,8 @@ import radarDataFetch
 import xarray as xr
 
 axExtent = [-99.5, -91, 26, 33.5]
+
+# hlmaPlot.py <src/flash>
 def set_size(w, h, ax=None):
     if not ax: ax=plt.gca()
     l = ax.figure.subplotpars.left
@@ -454,6 +457,14 @@ def makeSourcePlots(lmaFilePaths):
     plt.close(fig)
 
 if __name__ == "__main__":
+    # read "src" or "flash" from command line. If neither are provided, we'll assume both source and flash plots are desired
+    shouldPlotSrc = True
+    shouldPlotFlash = True
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "src":
+            shouldPlotFlash = False
+        elif sys.argv[1] == "flash":
+            shouldPlotSrc = False
     # get path to starting dir
     basePath = path.dirname(path.abspath(__file__))
     # get path to input files
@@ -490,8 +501,11 @@ if __name__ == "__main__":
         if timeOfFile < now - timedelta(hours=2):
             remove(path.join(inputPath, file))
             continue
-        makeSourcePlots([path.join(inputPath, file)])
-        makeFlashPlots([path.join(inputPath, file)])
+        if shouldPlotSrc:
+            makeSourcePlots([path.join(inputPath, file)])
+        if shouldPlotFlash:
+            makeFlashPlots([path.join(inputPath, file)])
+        exit()
     # Now let's do the same thing, but for 10-minute intervals of data
     alreadyPlottedTenMinFrames = list()
     lastHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
@@ -512,5 +526,7 @@ if __name__ == "__main__":
         if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedTenMinFrames:
             continue
         filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
-        makeSourcePlots(filesToPlot)
-        makeFlashPlots(filesToPlot)
+        if shouldPlotSrc:
+            makeSourcePlots(filesToPlot)
+        if shouldPlotFlash:
+            makeFlashPlots(filesToPlot)

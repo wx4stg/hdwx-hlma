@@ -21,12 +21,19 @@ if [ -f ../config.txt ]
 then
     source ../config.txt
 else
-    condaEnvName="HDWX"
+    condaEnvName="HDWX-dev"
 fi
 
 if [ -f $condaRootPath/envs/$condaEnvName/bin/python3 ]
 then
     $condaRootPath/envs/$condaEnvName/bin/python3 hlmaGR2A.py
-    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaPlot.py
+    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaPlot.py flash &
+    procpids[0]=$!
+    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaPlot.py src &
+    procpids[1]=$!
+    for procpid in ${procpids[*]}
+    do
+        wait $procpid
+    done
     $condaRootPath/envs/$condaEnvName/bin/python3 cleanup.py
 fi
