@@ -21,7 +21,7 @@ if [ -f ../config.txt ]
 then
     source ../config.txt
 else
-    condaEnvName="HDWX-dev"
+    condaEnvName="HDWX"
 fi
 
 if [ -f $condaRootPath/envs/$condaEnvName/bin/python3 ]

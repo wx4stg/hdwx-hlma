@@ -202,10 +202,22 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     chmod(productTypeDictPath, 0o644)
 
 def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
+    if path.exists(path.join(basePath, "firstPlotDT.txt")):
+        readFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "r")
+        firstPlotTime = dt.strptime(readFirstPlotFile.read(), "%Y%m%d%H%M")
+        readFirstPlotFile.close()
+    else:
+        firstPlotTime = dt.utcnow()
+        writeFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "w")
+        writeFirstPlotFile.write(firstPlotTime.strftime("%Y%m%d%H%M"))
+        writeFirstPlotFile.close()
+    if time < firstPlotTime:
+        return
     mrmsGribName = radarDataFetch.fetchRadarClosestToTime(time)
     if ".grib" in mrmsGribName:
         datasetFilePath = path.join(basePath, "radarInput", mrmsGribName)
         radarDS = xr.open_dataset(datasetFilePath)
+        radarDS = radarDS.sel(latitude=slice(axExtent[3], axExtent[2]), longitude=slice(axExtent[0]+360, axExtent[1]+360))
         radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
         norm, cmap = ctables.registry.get_with_steps("NWSReflectivity", 5, 5)
         cmap.set_under("#00000000")
@@ -491,7 +503,7 @@ if __name__ == "__main__":
             thisHourOneMinData = json.load(jsonRead)
         [alreadyPlottedOneMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourOneMinData["productFrames"]]
     # Plot every file in the input directory
-    inputDirContents = sorted(listdir(inputPath))
+    inputDirContents = sorted(listdir(inputPath), reverse=True)
     for file in inputDirContents:
         timeOfFileArr = file.split("_")
         # The time in the filename is the *start*, but the time in the json is the end, so add one minute to the filename time
@@ -505,7 +517,6 @@ if __name__ == "__main__":
             makeSourcePlots([path.join(inputPath, file)])
         if shouldPlotFlash:
             makeFlashPlots([path.join(inputPath, file)])
-        exit()
     # Now let's do the same thing, but for 10-minute intervals of data
     alreadyPlottedTenMinFrames = list()
     lastHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
@@ -518,7 +529,7 @@ if __name__ == "__main__":
         with open(thisHourTenMinMetadataPath, "r") as jsonRead:
             thisHourTenMinData = json.load(jsonRead)
         [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourTenMinData["productFrames"]]
-    inputDirContents = sorted(listdir(inputPath))
+    inputDirContents = sorted(listdir(inputPath), reverse=True)
     for i in range(10, len(inputDirContents)):
         lastFileInRange = inputDirContents[i]
         timeOfLastFileArr = lastFileInRange.split("_")

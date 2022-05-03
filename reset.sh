@@ -6,3 +6,4 @@ rm -rf output/
 rm -rf lightningin/
 rm status.txt
 rm -rf radarInput/
+rm firstPlotDT.txt
