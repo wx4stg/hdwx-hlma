@@ -7,6 +7,8 @@ import sys
 from pyxlma.lmalib.io import read as lma_read
 from pyxlma.lmalib.flash.cluster import cluster_flashes
 from pyxlma.lmalib.grid import  create_regular_grid, assign_regular_bins, events_to_grid
+from pyxlma.plot.xlma_plot_feature import color_by_time, plot_points, subset
+from pyxlma.plot.xlma_base_plot import subplot_labels, inset_view, BlankPlot
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimage
 from matplotlib import colors
@@ -106,6 +108,18 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         productDesc = "HLMA 1-minute Flash Extent Density + MRMS Reflectivity At Lowest Altitude"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+    elif productID == 154:
+        productDesc = "HLMA VHF 1-minute Sources Analysis Plot"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 155:
+        productDesc = "HLMA VHF 1-minute Sources Analysis Plot"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
+    elif productID == 156:
+        productDesc = "HLMA VHF 1-minute Sources Analysis Plot + MRMS Reflectivity At Lowest Altitude"
+        isGIS = False
+        gisInfo = ["0,0", "0,0"]
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
     # Create dictionary for the product. 
@@ -143,6 +157,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     # Now we need to add the frame we just wrote, as well as any that exist in the output directory that don't have metadata yet. 
     # To do this, we first check if the output directory is not empty.
     productRunPath = path.join(basePath, "output", productPath, runPathExtension)
+    Path(productRunPath).mkdir(parents=True, exist_ok=True)
     if len(listdir(productRunPath)) > 0:
         # If there are files inside, list them all
         frameNames = listdir(productRunPath)
@@ -223,11 +238,13 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         cmap.set_under("#00000000")
         cmap.set_over("black")
         rdr = ax.pcolormesh(radarDS.longitude, radarDS.latitude, radarData, cmap=cmap, norm=norm, transform=ccrs.PlateCarree(), zorder=5, alpha=0.5)
-        cbax.set_position([.01,0.05,(ax.get_position().width/3),.01])
-        cbax.xaxis.set_ticks_position("top")
-        cbax.tick_params(axis="x", labelsize=9)
-        cbax.xaxis.set_label_position("top")
-        taxtext.set_text(taxtext.get_text().replace("Houston", "MRMS LL Reflectivity + Houston"))
+        if cbax is not None:
+            cbax.set_position([.01,0.05,(ax.get_position().width/3),.01])
+            cbax.xaxis.set_ticks_position("top")
+            cbax.tick_params(axis="x", labelsize=9)
+            cbax.xaxis.set_label_position("top")
+        if taxtext is not None:
+            taxtext.set_text(taxtext.get_text().replace("Houston", "MRMS LL Reflectivity + Houston"))
         cbaxRdr = fig.add_axes([.01,0.035,(ax.get_position().width/3),.01])
         fig.colorbar(rdr, cax=cbaxRdr, orientation="horizontal", extend="max")
         cbaxRdr.set_xlabel("Reflectivity (dBZ)", fontsize=9, labelpad=1)
@@ -238,6 +255,8 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         elif productID == 153:
             lightType = "flash"
             cbax.set_xlabel("Flash Extent Density (Flashes/km^2/min)", fontsize=9)
+        elif productID == 156:
+            lightType = "src-analysis"
         productPath = path.join("products", "hlma", "mrms-"+lightType)
         runPathExtension = path.join(time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"), time.strftime("%H")+"00")
         Path(path.join(basePath, "output", productPath, runPathExtension)).mkdir(parents=True, exist_ok=True)
@@ -386,10 +405,12 @@ def makeSourcePlots(lmaFilePaths):
     if len(lmaFilePaths) == 1:
         gisProductID = 140
         staticProductID = 141
+        lmaPlotID = 154
         writeToStatus("Plotting 1-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
     else:
         gisProductID = 143
         staticProductID = 144
+        lmaPlotID = 155
         writeToStatus("Plotting 10-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
     # Create fig/ax
     fig = plt.figure()
@@ -467,6 +488,29 @@ def makeSourcePlots(lmaFilePaths):
         addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 151)
     # Close figure when done (memory management)
     plt.close(fig)
+    # The LMA community has come up with a pretty cool plot of charge density vs lat, lon, time, and altitude, lets make one!
+    # First let's set lat, lon and alt boundaries
+    latRange = [float(lmaData.network_center_latitude)-1.5, float(lmaData.network_center_latitude)+1.5]
+    lonRange = [float(lmaData.network_center_longitude)-1.5, float(lmaData.network_center_longitude)+1.5]
+    # Now we need to subset our data to only valid points
+    lon_set, lat_set, alt_set, time_set, selection = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, (lmaData.event_altitude.values/1000), pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, [0,21], [startTimeOfPlot, timeOfPlot], 1.0, 6)
+    # Now we make a plot, this is super easy thanks to pyxlma
+    lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=[0, 21], tlim=[startTimeOfPlot, timeOfPlot], title="Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
+    lmaPlotFig = plt.gcf()
+    # Add our data
+    vmin, vmax, relcolors = color_by_time(time_set, [startTimeOfPlot, timeOfPlot])
+    plot_points(lmaPlot, lon_set, lat_set, alt_set, time_set, "rainbow", 5, vmin, vmax, relcolors, True)
+    # Create save directory if it doesn't already exist
+    lmaProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min-analysis")
+    lmaSavePath = path.join(basePath, "output", lmaProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
+    Path(path.dirname(lmaSavePath)).mkdir(parents=True, exist_ok=True)
+    # Write the image
+    lmaPlotFig.savefig(lmaSavePath)
+    # Write metadata for the product
+    writeJson(lmaPlotID, lmaProductPath, runPathExt, timeOfPlot)
+    if len(lmaFilePaths) == 1:
+        addMRMSToFig(lmaPlotFig, lmaPlotFig.axes[1], None, None, timeOfPlot, 156)
+    
 
 if __name__ == "__main__":
     # read "src" or "flash" from command line. If neither are provided, we'll assume both source and flash plots are desired
