@@ -12,7 +12,7 @@ def writeToStatus(stringToWrite):
     with open(path.join(basePath, "status.txt"), "a") as statw:
         statw.write(stringToWrite)
         statw.close()
-
+(
 if __name__ == "__main__":
     now = dt.now()
     basePath = path.dirname(path.abspath(__file__))
@@ -31,4 +31,5 @@ if __name__ == "__main__":
                     remove(filepath)
                     writeToStatus(filepath+" deleted.")
     remove(path.join(basePath, "status.txt"))
-    rmtree(path.join(basePath, "radarInput"))
+    if path.exists(path.join(basePath, "radarInput")):
+        rmtree(path.join(basePath, "radarInput"))
