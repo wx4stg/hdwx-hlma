@@ -217,7 +217,6 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     chmod(productTypeDictPath, 0o644)
 
 def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
-    print(time.minute % 2)
     if time.minute % 2 != 0:
         return
     if path.exists(path.join(basePath, "firstPlotDT.txt")):
@@ -499,9 +498,6 @@ def makeSourcePlots(lmaFilePaths):
     lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=[0, 21], tlim=[startTimeOfPlot, timeOfPlot], title="Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
     lmaPlotFig = plt.gcf()
     # Add our data
-    print(lmaData.event_longitude.data)
-    print(">>>>>>")
-    print(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask))
     vmin, vmax, relcolors = color_by_time(pd.Series(np.ma.masked_array(lmaData.event_time.data, mask=chi2Mask)), [startTimeOfPlot, timeOfPlot])
     plot_points(lmaPlot, np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_altitude.data, mask=chi2Mask), pd.Series(np.ma.masked_array(lmaData.event_time.data, mask=chi2Mask)), "rainbow", 5, vmin, vmax, relcolors, True)
     # Create save directory if it doesn't already exist
