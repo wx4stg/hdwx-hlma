@@ -217,6 +217,9 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     chmod(productTypeDictPath, 0o644)
 
 def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
+    print(time.minute % 2)
+    if time.minute % 2 != 0:
+        return
     if path.exists(path.join(basePath, "firstPlotDT.txt")):
         readFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "r")
         firstPlotTime = dt.strptime(readFirstPlotFile.read(), "%Y%m%d%H%M")
@@ -492,14 +495,15 @@ def makeSourcePlots(lmaFilePaths):
     # First let's set lat, lon and alt boundaries
     latRange = [float(lmaData.network_center_latitude)-1.5, float(lmaData.network_center_latitude)+1.5]
     lonRange = [float(lmaData.network_center_longitude)-1.5, float(lmaData.network_center_longitude)+1.5]
-    # Now we need to subset our data to only valid points
-    lon_set, lat_set, alt_set, time_set, selection = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, (lmaData.event_altitude.values/1000), pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, [0,21], [startTimeOfPlot, timeOfPlot], 1.0, 6)
     # Now we make a plot, this is super easy thanks to pyxlma
     lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=[0, 21], tlim=[startTimeOfPlot, timeOfPlot], title="Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
     lmaPlotFig = plt.gcf()
     # Add our data
-    vmin, vmax, relcolors = color_by_time(time_set, [startTimeOfPlot, timeOfPlot])
-    plot_points(lmaPlot, lon_set, lat_set, alt_set, time_set, "rainbow", 5, vmin, vmax, relcolors, True)
+    print(lmaData.event_longitude.data)
+    print(">>>>>>")
+    print(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask))
+    vmin, vmax, relcolors = color_by_time(pd.Series(np.ma.masked_array(lmaData.event_time.data, mask=chi2Mask)), [startTimeOfPlot, timeOfPlot])
+    plot_points(lmaPlot, np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_altitude.data, mask=chi2Mask), pd.Series(np.ma.masked_array(lmaData.event_time.data, mask=chi2Mask)), "rainbow", 5, vmin, vmax, relcolors, True)
     # Create save directory if it doesn't already exist
     lmaProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min-analysis")
     lmaSavePath = path.join(basePath, "output", lmaProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
