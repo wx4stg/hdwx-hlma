@@ -162,14 +162,14 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         # If there are files inside, list them all
         frameNames = listdir(productRunPath)
         # get an array of integers representing the minutes past the hour of frames that have already been generated
-        frameMinutes = [int(framename.replace(".png", "")) for framename in frameNames if ".png" in framename]
+        frameMinutes = [framename.replace(".png", "") for framename in frameNames if ".png" in framename]
         # Loop through the previously-generated minutes and generate metadata for each
         for frameMin in frameMinutes:
             frmDict = {
                 "fhour" : 0, # forecast hour is 0 for non-forecasts
-                "filename" : str(frameMin)+".png",
+                "filename" : frameMin+".png",
                 "gisInfo" : gisInfo,
-                "valid" : str(int(validTime.strftime("%Y%m%d%H00"))+frameMin)
+                "valid" : str(int(validTime.strftime("%Y%m%d%H00"))+int(frameMin))
             }
             # If this dictionary isn't already in the framesArray, add it
             if frmDict not in framesArray:
