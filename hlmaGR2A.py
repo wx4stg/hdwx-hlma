@@ -46,7 +46,8 @@ def writeJson(productID, productPath, validTime):
         "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
         "isForecast" : False,
         "isGIS" : False,
-        "fileExtension" : "php"
+        "fileExtension" : "php",
+        "displayFrames" : 1
     }
     # Target path for the product json is just output/metadata/<productID>.json
     productDictJsonPath = path.join(basePath, "output", "metadata", str(productID)+".json")
