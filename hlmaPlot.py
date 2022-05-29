@@ -502,7 +502,7 @@ def makeSourcePlots(lmaFilePaths):
     lmaPlotFig = plt.gcf()
     # Add our data
     vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
-    plot_points(lmaPlot, lonSet, latSet, altSet, timeSet, "rainbow", 5, vmin, vmax, relcolors, True)
+    plot_points(lmaPlot, lonSet, latSet, altSet, timeSet, "rainbow", 5, vmin, vmax, relcolors, edge_color="black", edge_width=0.25)
     # Create save directory if it doesn't already exist
     lmaProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min-analysis")
     lmaSavePath = path.join(basePath, "output", lmaProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
