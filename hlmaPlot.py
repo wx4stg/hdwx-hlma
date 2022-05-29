@@ -332,6 +332,8 @@ def makeFlashPlots(lmaFilePaths):
             return
         else:
             raise e
+    # Plot station locations
+    ax.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     # Get a handle to a pixel
     px = 1/plt.rcParams["figure.dpi"]
     # Make the GIS plot have a decent resolution. This wont end up being exactly 1920 by 1080 
@@ -424,7 +426,9 @@ def makeSourcePlots(lmaFilePaths):
     # We want to "mask out" points where the event chi^2 is greater than 2
     chi2Mask = np.where(lmaData.event_chi2.data >= 1.0, 1, 0)
     # Plot data
-    vhfSct = ax.scatter(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), 3, np.ma.masked_array(times, mask=chi2Mask), transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", norm=norm)
+    vhfSct = ax.scatter(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), 1, np.ma.masked_array(times, mask=chi2Mask), ",", transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", norm=norm)
+    # Plot station locations
+    ax.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     # Get a handle to a pixel
     px = 1/plt.rcParams["figure.dpi"]
     # Make the GIS plot have a decent resolution. This wont end up being exactly 1920 by 1080 
@@ -499,6 +503,8 @@ def makeSourcePlots(lmaFilePaths):
     lonSet, latSet, altSet, timeSet, selectedData = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, lmaData.event_altitude.values/1000, pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, altRange, [startTimeOfPlot, timeOfPlot], 1.0, 6.0)
     # Now we make a plot, this is super easy thanks to pyxlma
     lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=altRange, tlim=[startTimeOfPlot, timeOfPlot], title="Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
+    # Plot station locations
+    lmaPlot.ax_plan.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     lmaPlotFig = plt.gcf()
     # Add our data
     vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
@@ -512,7 +518,7 @@ def makeSourcePlots(lmaFilePaths):
     # Write metadata for the product
     writeJson(lmaPlotID, lmaProductPath, runPathExt, timeOfPlot)
     if len(lmaFilePaths) == 1:
-        addMRMSToFig(lmaPlotFig, lmaPlotFig.axes[1], None, None, timeOfPlot, 156)
+        addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
     
 
 if __name__ == "__main__":
