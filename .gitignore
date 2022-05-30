@@ -3,3 +3,4 @@ output/
 status.txt
 radarInput/
 firstPlotDT.txt
+__pycache__/
