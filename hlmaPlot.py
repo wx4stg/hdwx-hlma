@@ -326,7 +326,7 @@ def makeFlashPlots(lmaFilePaths):
     ax = plt.axes(projection=ccrs.epsg(3857))
     griddedLmaData = griddedLmaData.isel(grid_time=0)
     try:
-        flashContours = ax.contourf(griddedLmaData.flash_extent_density.grid_longitude, griddedLmaData.flash_extent_density.grid_latitude, griddedLmaData.flash_extent_density.data, levels=np.arange(1, 14.01, 0.1), cmap="plasma", transform=ccrs.PlateCarree(), zorder=4)
+        flashPcm = ax.pcolormesh(griddedLmaData.flash_extent_density.grid_longitude, griddedLmaData.flash_extent_density.grid_latitude, griddedLmaData.flash_extent_density.data, cmap="plasma", vmin=1, vmax=10, transform=ccrs.PlateCarree(), zorder=4)
     except Exception as e:
         if "GEOSContains" in str(e):
             return
@@ -366,7 +366,7 @@ def makeFlashPlots(lmaFilePaths):
     # Move the data axes to maximize the amount of space available to it
     ax.set_position([0.05, 0.11, .9, .87])
     cbax = fig.add_axes([.01,0.075,(ax.get_position().width/3),.02])
-    fig.colorbar(flashContours, cax=cbax, orientation="horizontal", label="Flash Extent Density (Flashes/km^2/min)", extend="max").set_ticks(np.arange(1, 14.01, 1))
+    fig.colorbar(flashPcm, cax=cbax, orientation="horizontal", label="Flash Extent Density (Flashes/km^2/min)", extend="max").set_ticks(np.arange(1, 10.01, 1))
     tax = fig.add_axes([ax.get_position().x0+cbax.get_position().width+.01,0.045,(ax.get_position().width/3),.05])
     title = tax.text(0.5, 0.5, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%M")+"-"+timeOfPlot.strftime("%H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
     tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
@@ -563,9 +563,9 @@ if __name__ == "__main__":
         timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
         if timeOfFile.strftime("%H%M%S") in alreadyPlottedOneMinFrames:
             continue
-        if timeOfFile < now - timedelta(hours=2):
-            remove(path.join(inputPath, file))
-            continue
+        # if timeOfFile < now - timedelta(hours=2):
+        #     remove(path.join(inputPath, file))
+        #     continue
         if shouldPlotSrc:
             makeSourcePlots([path.join(inputPath, file)])
         if shouldPlotFlash:
