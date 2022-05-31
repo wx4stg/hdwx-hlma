@@ -4,3 +4,4 @@ status.txt
 radarInput/
 firstPlotDT.txt
 ftppassword.txt
+__pycache__/
