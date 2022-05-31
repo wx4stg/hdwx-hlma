@@ -265,6 +265,20 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
         writeJson(productID, productPath, runPathExtension, time)
 
+def sendFileToFTP(pathToSend, datetime, productName):
+    from ftplib import FTP
+    passwordStr = None
+    if path.exists(path.join(basePath, "ftppassword.txt")):
+        currentStatusFile = open(path.join(basePath, "ftppassword.txt"), "r")
+        passwdStr = currentStatusFile.read()
+        currentStatusFile.close()
+    session = FTP("catalog.eol.ucar.edu", user=None, passwd=passwdStr)
+    session.cwd("/pub/incoming/catalog/escape/")
+    outgoingFileHandle = open(pathToSend, "rb")
+    session.storbinary("STOR gis.HLMA."+datetime.strftime("%Y%m%d%H%M")+"."+productName+".png", outgoingFileHandle)
+    outgoingFileHandle.close()
+    session.quit()
+
 
 def makeFlashPlots(lmaFilePaths):
     # Silence error_bad_lines warning when reading in LMA data
@@ -353,6 +367,7 @@ def makeFlashPlots(lmaFilePaths):
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
+    sendFileToFTP(gisSavePath, timeOfPlot, str(numMins*len(lmaFilePaths))+"min_flash-extent-density")
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
@@ -448,6 +463,7 @@ def makeSourcePlots(lmaFilePaths):
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
+    sendFileToFTP(gisSavePath, timeOfPlot, str(len(lmaFilePaths))+"min_vhf_sources")
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
