@@ -265,7 +265,7 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
         writeJson(productID, productPath, runPathExtension, time)
 
-def sendFileToFTP(pathToSend, datetime, productName):
+def sendFileToFTP(pathToSend, datetime, platform, productName):
     try:
         writeToStatus("Starting FTP for "+pathToSend)
         from ftplib import FTP
@@ -278,7 +278,7 @@ def sendFileToFTP(pathToSend, datetime, productName):
         session.login()
         session.cwd("/pub/incoming/catalog/escape/")
         outgoingFileHandle = open(pathToSend, "rb")
-        session.storbinary("STOR gis.HLMA."+datetime.strftime("%Y%m%d%H%M")+"."+productName+".png", outgoingFileHandle)
+        session.storbinary("STOR "+platform+".HLMA."+datetime.strftime("%Y%m%d%H%M")+"."+productName+".png", outgoingFileHandle)
         outgoingFileHandle.close()
         session.quit()
     except Exception as e:
@@ -376,7 +376,7 @@ def makeFlashPlots(lmaFilePaths):
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     if len(lmaFilePaths) == 1:
-        sendFileToFTP(gisSavePath, timeOfPlot, "flash_extent_density")
+        sendFileToFTP(gisSavePath, timeOfPlot, "gis", "flash_extent_density")
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
@@ -476,7 +476,7 @@ def makeSourcePlots(lmaFilePaths):
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Send file to NCAR FTP for ESCAPE field campaign
     if len(lmaFilePaths) == 1:
-        sendFileToFTP(gisSavePath, timeOfPlot, "vhf_sources")
+        sendFileToFTP(gisSavePath, timeOfPlot, "gis", "vhf_sources")
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
@@ -543,6 +543,7 @@ def makeSourcePlots(lmaFilePaths):
     # Write metadata for the product
     writeJson(lmaPlotID, lmaProductPath, runPathExt, timeOfPlot)
     if len(lmaFilePaths) == 1:
+        sendFileToFTP(lmaSavePath, timeOfPlot, "upperair", "vhf_sources")
         addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
     
 
@@ -588,9 +589,9 @@ if __name__ == "__main__":
         timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
         if timeOfFile.strftime("%H%M%S") in alreadyPlottedOneMinFrames:
             continue
-        # if timeOfFile < now - timedelta(hours=2):
-        #     remove(path.join(inputPath, file))
-        #     continue
+        if timeOfFile < now - timedelta(hours=2):
+            remove(path.join(inputPath, file))
+            continue
         if shouldPlotSrc:
             makeSourcePlots([path.join(inputPath, file)])
         if shouldPlotFlash:
