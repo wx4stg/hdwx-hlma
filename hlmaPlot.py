@@ -2,7 +2,7 @@
 # Python-based plotting of Houston Lightning Mapping Array data for next-gen HDWX
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
-from os import path, listdir, remove, chmod
+from os import path, listdir, remove, chmod, system
 import sys
 from pyxlma.lmalib.io import read as lma_read
 from pyxlma.lmalib.flash.cluster import cluster_flashes
@@ -23,10 +23,20 @@ import json
 import warnings
 import radarDataFetch
 import xarray as xr
+import atexit
+
 
 axExtent = [-99.5, -91, 26, 33.5]
 
-# hlmaPlot.py <src/flash>
+# hlmaPlot.py <src/flash> <accumulation>
+
+
+@atexit.register
+def exitFunc():
+    if len(sys.argv) > 2:
+        print("Plotting complete for "+sys.argv[2]+"-minute "+sys.argv[1])
+        system("bash generate.sh &")
+
 def set_size(w, h, ax=None):
     if not ax: ax=plt.gca()
     l = ax.figure.subplotpars.left
@@ -266,24 +276,24 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         writeJson(productID, productPath, runPathExtension, time)
 
 def sendFileToFTP(pathToSend, datetime, platform, productName):
-    try:
-        writeToStatus("Starting FTP for "+pathToSend)
-        from ftplib import FTP
-        passwdStr = None
-        if path.exists(path.join(basePath, "ftppassword.txt")):
+    if path.exists(path.join(basePath, "ftppassword.txt")):
+        try:
+            writeToStatus("Starting FTP for "+pathToSend)
+            from ftplib import FTP
+            passwdStr = None
             currentStatusFile = open(path.join(basePath, "ftppassword.txt"), "r")
             passwdStr = currentStatusFile.read()
             currentStatusFile.close()
-        session = FTP("catalog.eol.ucar.edu", user=None, passwd=passwdStr)
-        session.login()
-        session.cwd("/pub/incoming/catalog/escape/")
-        outgoingFileHandle = open(pathToSend, "rb")
-        session.storbinary("STOR "+platform+".HLMA."+datetime.strftime("%Y%m%d%H%M")+"."+productName+".png", outgoingFileHandle)
-        outgoingFileHandle.close()
-        session.quit()
-    except Exception as e:
-        print(e)
-        writeToStatus("Failed FTP for "+pathToSend)
+            session = FTP("catalog.eol.ucar.edu", user=None, passwd=passwdStr)
+            session.login()
+            session.cwd("/pub/incoming/catalog/escape/")
+            outgoingFileHandle = open(pathToSend, "rb")
+            session.storbinary("STOR "+platform+".HLMA."+datetime.strftime("%Y%m%d%H%M")+"."+productName+".png", outgoingFileHandle)
+            outgoingFileHandle.close()
+            session.quit()
+        except Exception as e:
+            print(e)
+            writeToStatus("Failed FTP for "+pathToSend)
 
 
 def makeFlashPlots(lmaFilePaths):
@@ -547,15 +557,42 @@ def makeSourcePlots(lmaFilePaths):
         addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
     
 
+def getAlreadyPlottedFrames(productID):
+    # Create (empty, but add to it in a sec...) list representing already plotted frames
+    alreadyPlottedFrames = list()
+    # Get path to last hour's json metadata
+    lastHourMetadataPath = path.join(basePath, "output", "metadata", "products", str(productID), dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
+    # Read in last hour's metadata
+    if path.exists(lastHourMetadataPath):
+        with open(lastHourMetadataPath, "r") as jsonRead:
+            lastHourData = json.load(jsonRead)
+        # Add already-generated frames to alreadyPlottedFrames list
+        # The valid time gets converted first from an int to a string, then the string is trimmed to only include HHMM
+        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourData["productFrames"]]
+    # Do the same thing for this hour's metadata
+    thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", str(productID), dt.strftime(now, "%Y%m%d%H00")+".json")
+    if path.exists(thisHourMetadataPath):
+        with open(thisHourMetadataPath, "r") as jsonRead:
+            thisHourOneMinData = json.load(jsonRead)
+        [alreadyPlottedFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourOneMinData["productFrames"]]
+    return alreadyPlottedFrames
+
 if __name__ == "__main__":
     # read "src" or "flash" from command line. If neither are provided, we'll assume both source and flash plots are desired
     shouldPlotSrc = True
     shouldPlotFlash = True
+    shouldPlot1min = True
+    shouldPlot10min = True
     if len(sys.argv) > 1:
         if sys.argv[1] == "src":
             shouldPlotFlash = False
         elif sys.argv[1] == "flash":
             shouldPlotSrc = False
+    if len(sys.argv) > 2:
+        if sys.argv[2] == "1":
+            shouldPlot10min = False
+        elif sys.argv[2] == "10":
+            shouldPlot1min = False
     # get path to starting dir
     basePath = path.dirname(path.abspath(__file__))
     # get path to input files
@@ -564,59 +601,63 @@ if __name__ == "__main__":
     now = dt.utcnow()
     # Get time one hour ago
     oneHourAgo = now - timedelta(hours=1)
-    # Create (empty, but add to it in a sec...) list representing already plotted frames
-    alreadyPlottedOneMinFrames = list()
-    # Get path to last hour's json metadata
-    lastHourOneMinMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
-    # Read in last hour's metadata
-    if path.exists(lastHourOneMinMetadataPath):
-        with open(lastHourOneMinMetadataPath, "r") as jsonRead:
-            lastHourOneMinData = json.load(jsonRead)
-        # Add already-generated frames to alreadyPlottedOneMinFrames list
-        # The valid time gets converted first from an int to a string, then the string is trimmed to only include HHMM
-        [alreadyPlottedOneMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourOneMinData["productFrames"]]
-    # Do the same thing for this hour's metadata
-    thisHourMetadataPath = path.join(basePath, "output", "metadata", "products", "140", dt.strftime(now, "%Y%m%d%H00")+".json")
-    if path.exists(thisHourMetadataPath):
-        with open(thisHourMetadataPath, "r") as jsonRead:
-            thisHourOneMinData = json.load(jsonRead)
-        [alreadyPlottedOneMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourOneMinData["productFrames"]]
-    # Plot every file in the input directory
-    inputDirContents = sorted(listdir(inputPath), reverse=True)
-    for file in inputDirContents:
-        timeOfFileArr = file.split("_")
-        # The time in the filename is the *start*, but the time in the json is the end, so add one minute to the filename time
-        timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
-        if timeOfFile.strftime("%H%M%S") in alreadyPlottedOneMinFrames:
-            continue
-        if timeOfFile < now - timedelta(hours=2):
-            remove(path.join(inputPath, file))
-            continue
+    if shouldPlot1min:
         if shouldPlotSrc:
-            makeSourcePlots([path.join(inputPath, file)])
+            # We're plotting 1 minute VHF Sources!
+            # Get the frames that have already been plotted
+            alreadyPlottedFrames = getAlreadyPlottedFrames(140)
+            # Plot every file in the input directory
+            inputDirContents = sorted(listdir(inputPath), reverse=True)
+            for file in inputDirContents:
+                timeOfFileArr = file.split("_")
+                # The time in the filename is the *start*, but the time in the json is the end, so add one minute to the filename time
+                timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
+                if timeOfFile < now - timedelta(hours=2):
+                    remove(path.join(inputPath, file))
+                    continue
+                if timeOfFile.strftime("%H%M%S") in alreadyPlottedFrames:
+                    continue
+                makeSourcePlots([path.join(inputPath, file)])
         if shouldPlotFlash:
-            makeFlashPlots([path.join(inputPath, file)])
-    # Now let's do the same thing, but for 10-minute intervals of data
-    alreadyPlottedTenMinFrames = list()
-    lastHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
-    if path.exists(lastHourTenMinMetadataPath):
-        with open(lastHourTenMinMetadataPath, "r") as jsonRead:
-            lastHourTenMinData = json.load(jsonRead)
-        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in lastHourTenMinData["productFrames"]]
-    thisHourTenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "143", dt.strftime(now, "%Y%m%d%H00")+".json")
-    if path.exists(thisHourTenMinMetadataPath):
-        with open(thisHourTenMinMetadataPath, "r") as jsonRead:
-            thisHourTenMinData = json.load(jsonRead)
-        [alreadyPlottedTenMinFrames.append(str(frame["valid"])[-4:]+"00") for frame in thisHourTenMinData["productFrames"]]
-    inputDirContents = sorted(listdir(inputPath), reverse=True)
-    for i in range(10, len(inputDirContents)):
-        lastFileInRange = inputDirContents[i]
-        timeOfLastFileArr = lastFileInRange.split("_")
-        timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
-        if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedTenMinFrames:
-            continue
-        filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
+            # We're plotting 1 minute flash extent density!
+            # Get the frames that have already been plotted
+            alreadyPlottedFrames = getAlreadyPlottedFrames(146)
+            # Plot every file in the input directory
+            inputDirContents = sorted(listdir(inputPath), reverse=True)
+            for file in inputDirContents:
+                timeOfFileArr = file.split("_")
+                # The time in the filename is the *start*, but the time in the json is the end, so add one minute to the filename time
+                timeOfFile = dt.strptime("20"+timeOfFileArr[1]+timeOfFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
+                if timeOfFile < now - timedelta(hours=2):
+                    remove(path.join(inputPath, file))
+                    continue
+                if timeOfFile.strftime("%H%M%S") in alreadyPlottedFrames:
+                    continue
+                makeFlashPlots([path.join(inputPath, file)])
+    if shouldPlot10min:
         if shouldPlotSrc:
-            makeSourcePlots(filesToPlot)
+            # We're plotting 10 minute VHF Sources!
+            # Get the frames that have already been plotted
+            alreadyPlottedFrames = getAlreadyPlottedFrames(143)
+            inputDirContents = sorted(listdir(inputPath), reverse=True)
+            for i in range(10, len(inputDirContents)):
+                lastFileInRange = inputDirContents[i]
+                timeOfLastFileArr = lastFileInRange.split("_")
+                timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
+                if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedFrames:
+                    continue
+                filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
+                makeSourcePlots(filesToPlot)
         if shouldPlotFlash:
-            makeFlashPlots(filesToPlot)
+            # We're plotting 10 minute flash extent density!
+            # Get the frames that have already been plotted
+            alreadyPlottedFrames = getAlreadyPlottedFrames(148)
+            inputDirContents = sorted(listdir(inputPath), reverse=True)
+            for i in range(10, len(inputDirContents)):
+                lastFileInRange = inputDirContents[i]
+                timeOfLastFileArr = lastFileInRange.split("_")
+                timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
+                if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedFrames:
+                    continue
+                filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
+                makeFlashPlots(filesToPlot)
