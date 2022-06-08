@@ -35,7 +35,7 @@ axExtent = [-99.5, -91, 26, 33.5]
 def exitFunc():
     if len(sys.argv) > 2:
         print("Plotting complete for "+sys.argv[2]+"-minute "+sys.argv[1])
-        system("bash generate.sh &")
+        system("bash continuous.sh &")
 
 def set_size(w, h, ax=None):
     if not ax: ax=plt.gca()
@@ -228,17 +228,6 @@ def writeJson(productID, productPath, runPathExtension, validTime):
 
 def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
     if time.minute % 2 != 0:
-        return
-    if path.exists(path.join(basePath, "firstPlotDT.txt")):
-        readFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "r")
-        firstPlotTime = dt.strptime(readFirstPlotFile.read(), "%Y%m%d%H%M")
-        readFirstPlotFile.close()
-    else:
-        firstPlotTime = dt.utcnow()
-        writeFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "w")
-        writeFirstPlotFile.write(firstPlotTime.strftime("%Y%m%d%H%M"))
-        writeFirstPlotFile.close()
-    if time < firstPlotTime:
         return
     mrmsGribName = radarDataFetch.fetchRadarClosestToTime(time)
     if ".grib" in mrmsGribName:
@@ -601,6 +590,16 @@ if __name__ == "__main__":
     now = dt.utcnow()
     # Get time one hour ago
     oneHourAgo = now - timedelta(hours=1)
+    # Avoid massive amounts of backfilling on first run by writing the first datetime plotted
+    if path.exists(path.join(basePath, "firstPlotDT.txt")):
+        readFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "r")
+        firstPlotTime = dt.strptime(readFirstPlotFile.read(), "%Y%m%d%H%M")
+        readFirstPlotFile.close()
+    else:
+        firstPlotTime = dt.utcnow()
+        writeFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "w")
+        writeFirstPlotFile.write(firstPlotTime.strftime("%Y%m%d%H%M"))
+        writeFirstPlotFile.close()
     if shouldPlot1min:
         if shouldPlotSrc:
             # We're plotting 1 minute VHF Sources!
@@ -616,6 +615,8 @@ if __name__ == "__main__":
                     remove(path.join(inputPath, file))
                     continue
                 if timeOfFile.strftime("%H%M%S") in alreadyPlottedFrames:
+                    continue
+                if timeOfFile < firstPlotTime:
                     continue
                 makeSourcePlots([path.join(inputPath, file)])
         if shouldPlotFlash:
@@ -633,6 +634,8 @@ if __name__ == "__main__":
                     continue
                 if timeOfFile.strftime("%H%M%S") in alreadyPlottedFrames:
                     continue
+                if timeOfFile < firstPlotTime:
+                    continue
                 makeFlashPlots([path.join(inputPath, file)])
     if shouldPlot10min:
         if shouldPlotSrc:
@@ -646,6 +649,8 @@ if __name__ == "__main__":
                 timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
                 if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedFrames:
                     continue
+                if timeOfLastFile < firstPlotTime:
+                    continue
                 filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
                 makeSourcePlots(filesToPlot)
         if shouldPlotFlash:
@@ -658,6 +663,8 @@ if __name__ == "__main__":
                 timeOfLastFileArr = lastFileInRange.split("_")
                 timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
                 if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedFrames:
+                    continue
+                if timeOfLastFile < firstPlotTime:
                     continue
                 filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
                 makeFlashPlots(filesToPlot)
