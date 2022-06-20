@@ -144,7 +144,7 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         isGIS = False
         gisInfo = ["0,0", "0,0"]
         displayFrames = 30
-    productFrames = displayFrames
+    productFrameCount = displayFrames
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
     # Create dictionary for the product. 
