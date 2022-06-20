@@ -69,67 +69,82 @@ def writeJson(productID, productPath, runPathExtension, validTime):
     isGIS = False
     gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
     fileExtension = "png"
-    productFrameCount = 60
     if productID == 140:
         productDesc = "HLMA VHF 1-minute Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+        displayFrames = 60
     elif productID == 141:
         productDesc = "HLMA VHF 1-minute Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
+        displayFrames = 60
     elif productID == 143:
         productDesc = "HLMA VHF 10-minute Sources"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+        displayFrames = 60
     elif productID == 144:
         productDesc = "HLMA VHF 10-minute Sources"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 146:
         productDesc = "HLMA 1-minute Flash Extent Density"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+        displayFrames = 60
     elif productID == 147:
         productDesc = "HLMA 1-minute Flash Extent Density"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 148:
         productDesc = "HLMA 10-minute Flash Extent Density"
         isGIS = True
         gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
+        displayFrames = 60
     elif productID == 149:
         productDesc = "HLMA 10-minute Flash Extent Density"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 150:
         productDesc = "HLMA VHF 1-minute Sources + ADRAD Reflectivity"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 151:
         productDesc = "HLMA VHF 1-minute Sources + MRMS Reflectivity At Lowest Altitude"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 152:
         productDesc = "HLMA 1-minute Flash Extent Density + ADRAD Reflectivity"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 153:
         productDesc = "HLMA 1-minute Flash Extent Density + MRMS Reflectivity At Lowest Altitude"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 30
     elif productID == 154:
         productDesc = "HLMA VHF 1-minute Sources Analysis Plot"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 155:
         productDesc = "HLMA VHF 1-minute Sources Analysis Plot"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 60
     elif productID == 156:
         productDesc = "HLMA VHF 1-minute Sources Analysis Plot + MRMS Reflectivity At Lowest Altitude"
         isGIS = False
         gisInfo = ["0,0", "0,0"]
+        displayFrames = 30
+    productFrames = displayFrames
     # For prettyness' sake, make all the publishTimes the same
     publishTime = dt.utcnow()
     # Create dictionary for the product. 
@@ -141,7 +156,8 @@ def writeJson(productID, productPath, runPathExtension, validTime):
         "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
         "isForecast" : False,
         "isGIS" : isGIS,
-        "fileExtension" : fileExtension
+        "fileExtension" : fileExtension,
+        "displayFrames" : displayFrames
     }
     # Target path for the product json is just output/metadata/<productID>.json
     productDictJsonPath = path.join(basePath, "output", "metadata", str(productID)+".json")
