@@ -280,26 +280,6 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
         writeJson(productID, productPath, runPathExtension, time)
 
-def sendFileToFTP(pathToSend, datetime, platform, productName):
-    if path.exists(path.join(basePath, "ftppassword.txt")):
-        try:
-            writeToStatus("Starting FTP for "+pathToSend)
-            from ftplib import FTP
-            passwdStr = None
-            currentStatusFile = open(path.join(basePath, "ftppassword.txt"), "r")
-            passwdStr = currentStatusFile.read()
-            currentStatusFile.close()
-            session = FTP("catalog.eol.ucar.edu", user=None, passwd=passwdStr)
-            session.login()
-            session.cwd("/pub/incoming/catalog/escape/")
-            outgoingFileHandle = open(pathToSend, "rb")
-            session.storbinary("STOR "+platform+".HLMA."+datetime.strftime("%Y%m%d%H%M")+"."+productName+".png", outgoingFileHandle)
-            outgoingFileHandle.close()
-            session.quit()
-        except Exception as e:
-            print(e)
-            writeToStatus("Failed FTP for "+pathToSend)
-
 
 def makeFlashPlots(lmaFilePaths):
     # Silence error_bad_lines warning when reading in LMA data
@@ -390,8 +370,6 @@ def makeFlashPlots(lmaFilePaths):
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
-    if len(lmaFilePaths) == 1:
-        sendFileToFTP(gisSavePath, timeOfPlot, "gis", "flash_extent_density")
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
@@ -489,9 +467,6 @@ def makeSourcePlots(lmaFilePaths):
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
-    # Send file to NCAR FTP for ESCAPE field campaign
-    if len(lmaFilePaths) == 1:
-        sendFileToFTP(gisSavePath, timeOfPlot, "gis", "vhf_sources")
     # Write metadata for the product
     writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
@@ -558,7 +533,6 @@ def makeSourcePlots(lmaFilePaths):
     # Write metadata for the product
     writeJson(lmaPlotID, lmaProductPath, runPathExt, timeOfPlot)
     if len(lmaFilePaths) == 1:
-        sendFileToFTP(lmaSavePath, timeOfPlot, "upperair", "vhf_sources")
         addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
     
 
