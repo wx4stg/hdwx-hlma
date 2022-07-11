@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Script to pass HLMA data from thor to weather-dev for next-gen HDWX
+# Script to pass HLMA data from thor to the generation server for python-based HDWX
 # Created 23 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 from datetime import datetime as dt, timedelta

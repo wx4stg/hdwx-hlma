@@ -1,5 +1,5 @@
 #!/bin/bash
-# HLMA product generation script for next-gen HDWX
+# HLMA product generation script for python-based HDWX
 # Created 27 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 if [ ! -d output/ ]

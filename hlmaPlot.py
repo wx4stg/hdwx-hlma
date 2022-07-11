@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Python-based plotting of Houston Lightning Mapping Array data for next-gen HDWX
+# Python-based plotting of Houston Lightning Mapping Array data for python-based HDWX
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 from os import path, listdir, remove, chmod, system
