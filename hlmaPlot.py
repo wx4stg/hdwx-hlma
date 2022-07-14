@@ -29,6 +29,12 @@ import atexit
 axExtent = [-99.5, -91, 26, 33.5]
 
 # hlmaPlot.py <src/flash> <accumulation>
+basePath = path.abspath(path.dirname(__file__))
+hasHelpers = False
+if path.exists(path.join(basePath, "HDWX_helpers.py")):
+    import HDWX_helpers
+    hasHelpers = True
+
 
 
 @atexit.register
@@ -60,187 +66,6 @@ def writeToStatus(stringToWrite):
         with open(path.join(basePath, "status.txt"), "a") as statw:
             statw.write(stringToWrite)
             statw.close()
-
-def writeJson(productID, productPath, runPathExtension, validTime):
-    # If you have no idea what's going on or why I'm doing all this json stuff, 
-    # check out http://weather-dev.geos.tamu.edu/wx4stg/api/ for documentation
-    # Get description and GIS based on productID
-    productDesc = ""
-    isGIS = False
-    gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-    fileExtension = "png"
-    if productID == 140:
-        productDesc = "HLMA VHF 1-minute Sources"
-        isGIS = True
-        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        displayFrames = 60
-    elif productID == 141:
-        productDesc = "HLMA VHF 1-minute Sources"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"] # gisInfo is ["0,0", "0,0"] for non-GIS products
-        displayFrames = 60
-    elif productID == 143:
-        productDesc = "HLMA VHF 10-minute Sources"
-        isGIS = True
-        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        displayFrames = 60
-    elif productID == 144:
-        productDesc = "HLMA VHF 10-minute Sources"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 146:
-        productDesc = "HLMA 1-minute Flash Extent Density"
-        isGIS = True
-        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        displayFrames = 60
-    elif productID == 147:
-        productDesc = "HLMA 1-minute Flash Extent Density"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 148:
-        productDesc = "HLMA 10-minute Flash Extent Density"
-        isGIS = True
-        gisInfo = [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])]
-        displayFrames = 60
-    elif productID == 149:
-        productDesc = "HLMA 10-minute Flash Extent Density"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 150:
-        productDesc = "HLMA VHF 1-minute Sources + ADRAD Reflectivity"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 151:
-        productDesc = "HLMA VHF 1-minute Sources + MRMS Reflectivity At Lowest Altitude"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 152:
-        productDesc = "HLMA 1-minute Flash Extent Density + ADRAD Reflectivity"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 153:
-        productDesc = "HLMA 1-minute Flash Extent Density + MRMS Reflectivity At Lowest Altitude"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 30
-    elif productID == 154:
-        productDesc = "HLMA VHF 1-minute Sources Analysis Plot"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 155:
-        productDesc = "HLMA VHF 1-minute Sources Analysis Plot"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 60
-    elif productID == 156:
-        productDesc = "HLMA VHF 1-minute Sources Analysis Plot + MRMS Reflectivity At Lowest Altitude"
-        isGIS = False
-        gisInfo = ["0,0", "0,0"]
-        displayFrames = 30
-    productFrameCount = displayFrames
-    # For prettyness' sake, make all the publishTimes the same
-    publishTime = dt.utcnow()
-    # Create dictionary for the product. 
-    productDict = {
-        "productID" : productID,
-        "productDescription" : productDesc,
-        "productPath" : productPath,
-        "productReloadTime" : 60,
-        "lastReloadTime" : publishTime.strftime("%Y%m%d%H%M"),
-        "isForecast" : False,
-        "isGIS" : isGIS,
-        "fileExtension" : fileExtension,
-        "displayFrames" : displayFrames
-    }
-    # Target path for the product json is just output/metadata/<productID>.json
-    productDictJsonPath = path.join(basePath, "output", "metadata", str(productID)+".json")
-    # Create output/metadata/ if it doesn't already exist
-    Path(path.dirname(productDictJsonPath)).mkdir(parents=True, exist_ok=True)
-    with open(productDictJsonPath, "w") as jsonWrite:
-        # Write the json. indent=4 gives pretty/human-readable format
-        json.dump(productDict, jsonWrite, indent=4)
-    chmod(productDictJsonPath, 0o644)
-    # Now we need to write a json for the product run in output/metadata/products/<productID>/<runTime>.json
-    productRunDictPath = path.join(basePath, "output", "metadata", "products", str(productID), validTime.strftime("%Y%m%d%H00")+".json")
-    # Create parent directory if it doesn't already exist.
-    Path(path.dirname(productRunDictPath)).mkdir(parents=True, exist_ok=True)
-    # If the json file already exists, read it in to to discover which frames have already been generated
-    if path.exists(productRunDictPath):
-        with open(productRunDictPath, "r") as jsonRead:
-            oldData = json.load(jsonRead)
-        # Add previously generated frames to a list, framesArray
-        framesArray = oldData["productFrames"]
-    else:
-        # If that file didn't exist, then create an empty list instead
-        framesArray = list()
-    # Now we need to add the frame we just wrote, as well as any that exist in the output directory that don't have metadata yet. 
-    # To do this, we first check if the output directory is not empty.
-    productRunPath = path.join(basePath, "output", productPath, runPathExtension)
-    Path(productRunPath).mkdir(parents=True, exist_ok=True)
-    if len(listdir(productRunPath)) > 0:
-        # If there are files inside, list them all
-        frameNames = listdir(productRunPath)
-        # get an array of integers representing the minutes past the hour of frames that have already been generated
-        frameMinutes = [framename.replace(".png", "") for framename in frameNames if ".png" in framename]
-        # Loop through the previously-generated minutes and generate metadata for each
-        for frameMin in frameMinutes:
-            frmDict = {
-                "fhour" : 0, # forecast hour is 0 for non-forecasts
-                "filename" : frameMin+".png",
-                "gisInfo" : gisInfo,
-                "valid" : str(int(validTime.strftime("%Y%m%d%H00"))+int(frameMin))
-            }
-            # If this dictionary isn't already in the framesArray, add it
-            if frmDict not in framesArray:
-                framesArray.append(frmDict)
-    productRunDict = {
-        "publishTime" : publishTime.strftime("%Y%m%d%H%M"),
-        "pathExtension" : runPathExtension,
-        "runName" : validTime.strftime("%d %b %Y %HZ"),
-        "availableFrameCount" : len(framesArray),
-        "totalFrameCount" : productFrameCount,
-        "productFrames" : sorted(framesArray, key=lambda dict: int(dict["valid"])) # productFramesArray, sorted by increasing valid Time
-    }
-    # Write productRun dictionary to json
-    with open(productRunDictPath, "w") as jsonWrite:
-        json.dump(productRunDict, jsonWrite, indent=4)
-    chmod(productRunDictPath, 0o644)
-    # Now we need to create a dictionary for the product type (TAMU)
-    productTypeID = 1
-    # Output for this json is output/metadata/productTypes/1.json
-    productTypeDictPath = path.join(basePath, "output/metadata/productTypes/"+str(productTypeID)+".json")
-    # Create output directory if it doesn't already exist
-    Path(path.dirname(productTypeDictPath)).mkdir(parents=True, exist_ok=True)
-    # Create empty list that will soon hold a dict for each of the products generated by this script
-    productsInType = list()
-    # If the productType json file already exists, read it in to discover which products it contains
-    if path.exists(productTypeDictPath):
-        with open(productTypeDictPath, "r") as jsonRead:
-            oldProductTypeDict = json.load(jsonRead)
-        # Add all of the products from the json file into the productsInType list...
-        for productInOldDict in oldProductTypeDict["products"]:
-            # ...except for the one that's currently being generated (prevents duplicating it)
-            if productInOldDict["productID"] != productID:
-                productsInType.append(productInOldDict)
-    # Add the productDict for the product we just generated
-    productsInType.append(productDict)
-    # Create productType Dict
-    productTypeDict = {
-        "productTypeID" : productTypeID,
-        "productTypeDescription" : "TAMU",
-        "products" : sorted(productsInType, key=lambda dict: dict["productID"]) # productsInType, sorted by productID
-    }
-    # Write productType dict to json
-    with open(productTypeDictPath, "w") as jsonWrite:
-        json.dump(productTypeDict, jsonWrite, indent=4)
-    chmod(productTypeDictPath, 0o644)
 
 def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
     if time.minute % 2 != 0:
@@ -278,7 +103,8 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         runPathExtension = path.join(time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"), time.strftime("%H")+"00")
         Path(path.join(basePath, "output", productPath, runPathExtension)).mkdir(parents=True, exist_ok=True)
         fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
-        writeJson(productID, productPath, runPathExtension, time)
+        if hasHelpers:
+            HDWX_helpers.writeJson(basePath, productID, time, time.strftime("%M.png"), time, ["0,0", "0,0"], 60)
 
 
 def makeFlashPlots(lmaFilePaths):
@@ -371,7 +197,8 @@ def makeFlashPlots(lmaFilePaths):
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Write metadata for the product
-    writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
+    if hasHelpers:
+        HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -406,7 +233,8 @@ def makeFlashPlots(lmaFilePaths):
     # Write the image
     fig.savefig(staticSavePath)
     # Write metadata for the product
-    writeJson(staticProductID, staticProductPath, runPathExt, timeOfPlot)
+    if hasHelpers:
+        HDWX_helpers.writeJson(basePath, staticProductID, timeOfPlot, path.basename(staticSavePath), timeOfPlot, ["0,0", "0,0"], 60)
     if len(lmaFilePaths) == 1:
         # Now we can add MRMS to the figure
         addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 153)
@@ -468,7 +296,8 @@ def makeSourcePlots(lmaFilePaths):
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
     fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Write metadata for the product
-    writeJson(gisProductID, gisProductPath, runPathExt, timeOfPlot)
+    if hasHelpers:
+        HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -503,7 +332,8 @@ def makeSourcePlots(lmaFilePaths):
     # Write the image
     fig.savefig(staticSavePath)
     # Write metadata for the product
-    writeJson(staticProductID, staticProductPath, runPathExt, timeOfPlot)
+    if hasHelpers:
+        HDWX_helpers.writeJson(basePath, staticProductID, timeOfPlot, path.basename(staticSavePath), timeOfPlot, ["0,0", "0,0"], 60)
     if len(lmaFilePaths) == 1:
         # Now we can add MRMS to the figure
         addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 151)
@@ -531,7 +361,8 @@ def makeSourcePlots(lmaFilePaths):
     # Write the image
     lmaPlotFig.savefig(lmaSavePath)
     # Write metadata for the product
-    writeJson(lmaPlotID, lmaProductPath, runPathExt, timeOfPlot)
+    if hasHelpers:
+        HDWX_helpers.writeJson(basePath, lmaPlotID, timeOfPlot, path.basename(lmaSavePath), timeOfPlot, ["0,0", "0,0"], 60)
     if len(lmaFilePaths) == 1:
         addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
     
@@ -572,8 +403,6 @@ if __name__ == "__main__":
             shouldPlot10min = False
         elif sys.argv[2] == "10":
             shouldPlot1min = False
-    # get path to starting dir
-    basePath = path.dirname(path.abspath(__file__))
     # get path to input files
     inputPath = path.join(basePath, "lightningin")
     # Get current time

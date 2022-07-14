@@ -6,3 +6,4 @@ firstPlotDT.txt
 ftppassword.txt
 __pycache__/
 *lock.txt
+HDWX_helpers.py
