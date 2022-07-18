@@ -26,6 +26,7 @@ then
 fi
 if [ -f $condaRootPath/envs/$condaEnvName/bin/python3 ]
 then
+    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaFetch.py
     $condaRootPath/envs/$condaEnvName/bin/python3 hlmaGR2A.py
     bash continuous.sh
 fi
