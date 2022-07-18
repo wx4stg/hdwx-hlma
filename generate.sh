@@ -29,6 +29,6 @@ then
     $condaRootPath/envs/$condaEnvName/bin/python3 hlmaFetch.py
     $condaRootPath/envs/$condaEnvName/bin/python3 hlmaGR2A.py
     bash continuous.sh
+    $condaRootPath/envs/$condaEnvName/bin/python3 cleanup.py
 fi
 
-$condaRootPath/envs/$condaEnvName/bin/python3 cleanup.py
