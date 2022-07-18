@@ -26,7 +26,7 @@ then
 fi
 if [ -f $condaRootPath/envs/$condaEnvName/bin/python3 ]
 then
-    $condaRootPath/envs/$condaEnvName/bin/python3 -m line_profiler hlmaGR2A.py
+    $condaRootPath/envs/$condaEnvName/bin/python3 hlmaGR2A.py
     bash continuous.sh
     $condaRootPath/envs/$condaEnvName/bin/python3 cleanup.py
 fi
