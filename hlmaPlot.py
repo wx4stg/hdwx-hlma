@@ -203,27 +203,10 @@ def makeFlashPlots(lmaFilePaths):
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
-    # Reduce whitespace around data axes
-    ax.set_box_aspect(9/16)
-    # Move the data axes to maximize the amount of space available to it
-    ax.set_position([0.05, 0.11, .9, .87])
-    cbax = fig.add_axes([.01,0.075,(ax.get_position().width/3),.02])
-    fig.colorbar(flashPcm, cax=cbax, orientation="horizontal", label="Flash Extent Density (Flashes/km^2/min)", extend="max").set_ticks(np.arange(1, 10.01, 1))
-    tax = fig.add_axes([ax.get_position().x0+cbax.get_position().width+.01,0.045,(ax.get_position().width/3),.05])
-    title = tax.text(0.5, 0.5, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%M")+"-"+timeOfPlot.strftime("%H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
-    tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
-    plt.setp(tax.spines.values(), visible=False)
-    tax.tick_params(left=False, labelleft=False)
-    tax.tick_params(bottom=False, labelbottom=False)
-    lax = fig.add_axes([(.99-(ax.get_position().width/3)),0,(ax.get_position().width/3),.1])
-    lax.set_aspect(2821/11071)
-    lax.axis("off")
-    plt.setp(lax.spines.values(), visible=False)
-    atmoLogo = mpimage.imread(path.join(basePath, "assets", "atmoLogo.png"))
-    lax.imshow(atmoLogo)
-    ax.set_position([.005, cbax.get_position().y0+cbax.get_position().height+.005, .99, (.99-(cbax.get_position().y0+cbax.get_position().height))])
-    # Set size to 1080p, resolution of the weather center monitors
-    fig.set_size_inches(1920*px, 1080*px)
+    # Apply standard HDWX branding to the image
+    HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density", timeOfPlot, plotHandle=flashPcm, cbticks=range(1, 11), cbextend="max", colorbarLabel="Flash Extent Density (Flashes/km^2/min)")
+    title = fig.axes[2].get_children()[0]
+    cbax = fig.axes[1]
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
     staticProductPath = path.join("products", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
     # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
@@ -302,27 +285,10 @@ def makeSourcePlots(lmaFilePaths):
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
-    # Reduce whitespace around data axes
-    ax.set_box_aspect(9/16)
-    # Move the data axes to maximize the amount of space available to it
-    ax.set_position([0.05, 0.11, .9, .87])
-    cbax = fig.add_axes([.01,0.075,(ax.get_position().width/3),.02])
-    fig.colorbar(vhfSct, cax=cbax, orientation="horizontal", label="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
-    tax = fig.add_axes([ax.get_position().x0+cbax.get_position().width+.01,0.045,(ax.get_position().width/3),.05])
-    title = tax.text(0.5, 0.5, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+timeOfPlot.strftime("%-d %b %Y %H%MZ"), horizontalalignment="center", verticalalignment="center", fontsize=16)
-    tax.set_xlabel("Python HDWX -- Send bugs to stgardner4@tamu.edu")
-    plt.setp(tax.spines.values(), visible=False)
-    tax.tick_params(left=False, labelleft=False)
-    tax.tick_params(bottom=False, labelbottom=False)
-    lax = fig.add_axes([(.99-(ax.get_position().width/3)),0,(ax.get_position().width/3),.1])
-    lax.set_aspect(2821/11071)
-    lax.axis("off")
-    plt.setp(lax.spines.values(), visible=False)
-    atmoLogo = mpimage.imread(path.join(basePath, "assets", "atmoLogo.png"))
-    lax.imshow(atmoLogo)
-    ax.set_position([.005, cbax.get_position().y0+cbax.get_position().height+.005, .99, (.99-(cbax.get_position().y0+cbax.get_position().height))])
-    # Set size to 1080p, resolution of the weather center monitors
-    fig.set_size_inches(1920*px, 1080*px)
+    # Apply standard HDWX branding to the image
+    HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=vhfSct, cbextend="neither", colorbarLabel="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
+    title = fig.axes[2].get_children()[0]
+    cbax = fig.axes[1]
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
     staticProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
     # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
