@@ -2,20 +2,20 @@
 # Python-based plotting of Houston Lightning Mapping Array data for python-based HDWX
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
-from os import path, listdir, remove, chmod, system
+from os import path, listdir, remove, system
 import sys
 from pyxlma.lmalib.io import read as lma_read
 from pyxlma.lmalib.flash.cluster import cluster_flashes
-from pyxlma.lmalib.grid import  create_regular_grid, assign_regular_bins, events_to_grid
+from pyxlma.lmalib.grid import create_regular_grid, assign_regular_bins, events_to_grid
 from pyxlma.plot.xlma_plot_feature import color_by_time, plot_points, subset
 from pyxlma.plot.xlma_base_plot import subplot_labels, inset_view, BlankPlot
 from matplotlib import pyplot as plt
-from matplotlib import image as mpimage
 from matplotlib import colors
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
 import numpy as np
-from metpy.plots import USCOUNTIES, ctables
+from metpy.plots import USCOUNTIES
+from matplotlib import colors as pltcolors
 import pandas as pd
 from datetime import datetime as dt, timedelta
 from pathlib import Path
@@ -76,10 +76,14 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         radarDS = xr.open_dataset(datasetFilePath)
         radarDS = radarDS.sel(latitude=slice(axExtent[3], axExtent[2]), longitude=slice(axExtent[0]+360, axExtent[1]+360))
         radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
-        norm, cmap = ctables.registry.get_with_steps("NWSReflectivity", 5, 5)
-        cmap.set_under("#00000000")
-        cmap.set_over("black")
-        rdr = ax.pcolormesh(radarDS.longitude, radarDS.latitude, radarData, cmap=cmap, norm=norm, transform=ccrs.PlateCarree(), zorder=5, alpha=0.5)
+        specR = plt.cm.Spectral_r(np.linspace(0, 0.95, 200))
+        pink = plt.cm.PiYG(np.linspace(0, 0.25, 40))
+        purple = plt.cm.PRGn(np.linspace(0, 0.25, 40))
+        cArr = np.vstack((specR, pink, purple))
+        cmap = pltcolors.LinearSegmentedColormap.from_list("cvd-reflectivity", cArr)
+        vmin=10
+        vmax=80
+        rdr = ax.pcolormesh(radarDS.longitude, radarDS.latitude, radarData, cmap=cmap, vmin=vmin, vmax=vmax, transform=ccrs.PlateCarree(), zorder=5, alpha=0.5)
         if cbax is not None:
             cbax.set_position([.01,0.05,(ax.get_position().width/3),.01])
             cbax.xaxis.set_ticks_position("top")
@@ -242,17 +246,24 @@ def makeSourcePlots(lmaFilePaths):
         staticProductID = 144
         lmaPlotID = 155
         writeToStatus("Plotting 10-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
+    # Add the number of one minute files ingested to the start time to get the end time
+    timeOfPlot = startTimeOfPlot + timedelta(minutes=len(lmaFilePaths))
     # Create fig/ax
     fig = plt.figure()
     ax = plt.axes(projection=ccrs.epsg(3857))
-    # We want to color our points by the time that they occurred, relative to the rest of the dataset
-    times = [(pd.to_datetime(npt) - startTimeOfPlot).seconds + (pd.to_datetime(npt) - startTimeOfPlot).microseconds*0.000001 for npt in lmaData.event_time.data]
-    # Normalize the colormap for the number of minutes we're plotting
-    norm = colors.Normalize(0, 60*len(lmaFilePaths))
-    # We want to "mask out" points where the event chi^2 is greater than 2
-    chi2Mask = np.where(lmaData.event_chi2.data >= 1.0, 1, 0)
+    # We want to "mask out" points where the event chi^2 is greater than 1 and points outside our lat/lon/alt range
+    latRange = [float(lmaData.network_center_latitude)-1.5, float(lmaData.network_center_latitude)+1.5]
+    lonRange = [float(lmaData.network_center_longitude)-1.5, float(lmaData.network_center_longitude)+1.5]
+    altRange = [0, 21]
+    # Subset the data to our parameters (again... I was unsuccessful when attempting to get pyxlma to read in the masked arrays from earlier)
+    lonSet, latSet, altSet, timeSet, selectedData = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, lmaData.event_altitude.values/1000, pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, altRange, [startTimeOfPlot, timeOfPlot], 1.0, 6.0)
+    vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
+    if vmin < 1:
+        vmin = 0
+    if vmax > 59:
+        vmax = 60
     # Plot data
-    vhfSct = ax.scatter(np.ma.masked_array(lmaData.event_longitude.data, mask=chi2Mask), np.ma.masked_array(lmaData.event_latitude.data, mask=chi2Mask), 1, np.ma.masked_array(times, mask=chi2Mask), ",", transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", norm=norm)
+    vhfSct = ax.scatter(lonSet, latSet, 1, relcolors, ",", transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", vmin=vmin, vmax=vmax)
     # Plot station locations
     ax.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     # Get a handle to a pixel
@@ -262,8 +273,6 @@ def makeSourcePlots(lmaFilePaths):
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
-    # Add the number of one minute files ingested to the start time to get the end time
-    timeOfPlot = startTimeOfPlot + timedelta(minutes=len(lmaFilePaths))
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
     # Use os.path to preserve Windows compatibility
     gisProductPath = path.join("gisproducts", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
@@ -286,7 +295,10 @@ def makeSourcePlots(lmaFilePaths):
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
     # Apply standard HDWX branding to the image
-    HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=vhfSct, cbextend="neither", colorbarLabel="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
+    if len(relcolors) > 0:
+        HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=vhfSct, cbextend="neither", colorbarLabel="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
+    else:
+        HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=None, cbextend="neither", colorbarLabel="No VHF Sources")
     title = fig.axes[2].get_children()[0]
     cbax = fig.axes[1]
     # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
@@ -306,19 +318,11 @@ def makeSourcePlots(lmaFilePaths):
     # Close figure when done (memory management)
     plt.close(fig)
     # The LMA community has come up with a pretty cool plot of charge density vs lat, lon, time, and altitude, lets make one!
-    # First let's set lat, lon and alt boundaries
-    latRange = [float(lmaData.network_center_latitude)-1.5, float(lmaData.network_center_latitude)+1.5]
-    lonRange = [float(lmaData.network_center_longitude)-1.5, float(lmaData.network_center_longitude)+1.5]
-    altRange = [0, 21]
-    # Subset the data to our parameters (again... I was unsuccessful when attempting to get pyxlma to read in the masked arrays from earlier)
-    lonSet, latSet, altSet, timeSet, selectedData = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, lmaData.event_altitude.values/1000, pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, altRange, [startTimeOfPlot, timeOfPlot], 1.0, 6.0)
-    # Now we make a plot, this is super easy thanks to pyxlma
     lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=altRange, tlim=[startTimeOfPlot, timeOfPlot], title="Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
     # Plot station locations
     lmaPlot.ax_plan.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     lmaPlotFig = plt.gcf()
     # Add our data
-    vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
     plot_points(lmaPlot, lonSet, latSet, altSet, timeSet, "rainbow", 5, vmin, vmax, relcolors, edge_color="black", edge_width=0.25)
     # Create save directory if it doesn't already exist
     lmaProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min-analysis")
