@@ -77,8 +77,8 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         radarDS = radarDS.sel(latitude=slice(axExtent[3], axExtent[2]), longitude=slice(axExtent[0]+360, axExtent[1]+360))
         radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
         specR = plt.cm.Spectral_r(np.linspace(0, 0.95, 200))
-        pink = plt.cm.PiYG(np.linspace(0, 0.25, 40))
-        purple = plt.cm.PRGn(np.linspace(0, 0.25, 40))
+        pink = plt.cm.PiYG_r(np.linspace(0.75, 1, 40))
+        purple = plt.cm.PRGn(np.linspace(0.75, 1, 40))
         cArr = np.vstack((specR, pink, purple))
         cmap = pltcolors.LinearSegmentedColormap.from_list("cvd-reflectivity", cArr)
         vmin=10
