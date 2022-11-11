@@ -260,8 +260,8 @@ def makeSourcePlots(lmaFilePaths):
     vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
     if vmin < 1:
         vmin = 0
-    if vmax > 59:
-        vmax = 60
+    if vmax > (len(lmaFilePaths)*60 - 1):
+        vmax = len(lmaFilePaths)*60
     # Plot data
     vhfSct = ax.scatter(lonSet, latSet, 1, relcolors, ",", transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", vmin=vmin, vmax=vmax)
     # Plot station locations
