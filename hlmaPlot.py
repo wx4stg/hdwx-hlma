@@ -4,6 +4,7 @@
 
 from os import path, listdir, remove, system
 import sys
+import pyart
 from pyxlma.lmalib.io import read as lma_read
 from pyxlma.lmalib.flash.cluster import cluster_flashes
 from pyxlma.lmalib.grid import create_regular_grid, assign_regular_bins, events_to_grid
@@ -76,12 +77,8 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         radarDS = xr.open_dataset(datasetFilePath)
         radarDS = radarDS.sel(latitude=slice(axExtent[3], axExtent[2]), longitude=slice(axExtent[0]+360, axExtent[1]+360))
         radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
-        specR = plt.cm.Spectral_r(np.linspace(0, 1, 200))
-        pink = plt.cm.PiYG(np.linspace(0, 0.25, 40))
-        purple = plt.cm.PRGn_r(np.linspace(0.75, 1, 40))
-        cArr = np.vstack((specR, pink, purple))
-        cmap = pltcolors.LinearSegmentedColormap.from_list("cvd-reflectivity", cArr)
-        vmin=10
+        cmap = "pyart_ChaseSpectral"
+        vmin=-10
         vmax=80
         rdr = ax.pcolormesh(radarDS.longitude, radarDS.latitude, radarData, cmap=cmap, vmin=vmin, vmax=vmax, transform=ccrs.PlateCarree(), zorder=5, alpha=0.5)
         if cbax is not None:
