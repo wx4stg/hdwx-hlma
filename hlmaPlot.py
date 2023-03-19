@@ -106,9 +106,11 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
         productPath = path.join("products", "hlma", "mrms-"+lightType)
         runPathExtension = path.join(time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"), time.strftime("%H")+"00")
         Path(path.join(basePath, "output", productPath, runPathExtension)).mkdir(parents=True, exist_ok=True)
-        fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
         if hasHelpers:
+            HDWX_helpers.saveImage(fig, path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
             HDWX_helpers.writeJson(basePath, productID, time, time.strftime("%M.png"), time, ["0,0", "0,0"], 60)
+        else:
+            fig.savefig(path.join(basePath, "output", productPath, runPathExtension, time.strftime("%M.png")))
 
 
 def makeFlashPlots(lmaFilePaths):
@@ -199,10 +201,12 @@ def makeFlashPlots(lmaFilePaths):
     extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
-    fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
-    # Write metadata for the product
     if hasHelpers:
+        HDWX_helpers.saveImage(fig, gisSavePath, transparent=True, bbox_inches=extent)
+        # Write metadata for the product
         HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
+    else:
+        fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -218,10 +222,12 @@ def makeFlashPlots(lmaFilePaths):
     # Create save directory if it doesn't already exist
     Path(path.dirname(staticSavePath)).mkdir(parents=True, exist_ok=True)
     # Write the image
-    fig.savefig(staticSavePath)
-    # Write metadata for the product
     if hasHelpers:
+        HDWX_helpers.saveImage(fig, staticSavePath)
+        # Write metadata for the product
         HDWX_helpers.writeJson(basePath, staticProductID, timeOfPlot, path.basename(staticSavePath), timeOfPlot, ["0,0", "0,0"], 60)
+    else:
+        fig.savefig(staticSavePath)
     if len(lmaFilePaths) == 1:
         # Now we can add MRMS to the figure
         addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 153)
@@ -286,10 +292,12 @@ def makeSourcePlots(lmaFilePaths):
     extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
     # save the figure, but trim the whitespace
     # we do this because including the whitespace would make the data not align to the GIS information in the metadata
-    fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # Write metadata for the product
     if hasHelpers:
+        HDWX_helpers.saveImage(fig, gisSavePath, transparent=True, bbox_inches=extent)
         HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
+    else:
+        fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -308,10 +316,12 @@ def makeSourcePlots(lmaFilePaths):
     # Create save directory if it doesn't already exist
     Path(path.dirname(staticSavePath)).mkdir(parents=True, exist_ok=True)
     # Write the image
-    fig.savefig(staticSavePath)
-    # Write metadata for the product
     if hasHelpers:
+        HDWX_helpers.saveImage(fig, staticSavePath)
+        # Write metadata for the product
         HDWX_helpers.writeJson(basePath, staticProductID, timeOfPlot, path.basename(staticSavePath), timeOfPlot, ["0,0", "0,0"], 60)
+    else:
+        fig.savefig(staticSavePath)
     if len(lmaFilePaths) == 1:
         # Now we can add MRMS to the figure
         addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 151)
@@ -329,10 +339,12 @@ def makeSourcePlots(lmaFilePaths):
     lmaSavePath = path.join(basePath, "output", lmaProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     Path(path.dirname(lmaSavePath)).mkdir(parents=True, exist_ok=True)
     # Write the image
-    lmaPlotFig.savefig(lmaSavePath)
-    # Write metadata for the product
     if hasHelpers:
+        HDWX_helpers.saveImage(lmaPlotFig, lmaSavePath)
+        # Write metadata for the product
         HDWX_helpers.writeJson(basePath, lmaPlotID, timeOfPlot, path.basename(lmaSavePath), timeOfPlot, ["0,0", "0,0"], 60)
+    else:
+        lmaPlotFig.savefig(lmaSavePath)
     if len(lmaFilePaths) == 1:
         addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
     
