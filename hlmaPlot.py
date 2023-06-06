@@ -100,11 +100,9 @@ def makeFlashPlots(lmaFilePaths):
     if elapsedTimeOfData == 1:
         gisProductID = 146
         staticProductID = 147
-        writeToStatus("Plotting 1-minute flash-extent data for "+startTimeOfPlot.strftime("%H:%M"))
     elif elapsedTimeOfData == 10:
         gisProductID = 148
         staticProductID = 149
-        writeToStatus("Plotting 10-minute flash-extent data for "+startTimeOfPlot.strftime("%H:%M"))
     # Get end time for grid creation
     timeOfPlot = startTimeOfPlot + numMins*timedelta(minutes=len(lmaFilePaths))
     dttuple = (np.datetime64(startTimeOfPlot), np.datetime64(timeOfPlot))
@@ -218,12 +216,10 @@ def makeSourcePlots(lmaFilePaths):
         gisProductID = 140
         staticProductID = 141
         lmaPlotID = 154
-        writeToStatus("Plotting 1-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
     else:
         gisProductID = 143
         staticProductID = 144
         lmaPlotID = 155
-        writeToStatus("Plotting 10-minute source data for "+startTimeOfPlot.strftime("%H:%M"))
     # Add the number of one minute files ingested to the start time to get the end time
     timeOfPlot = startTimeOfPlot + timedelta(minutes=len(lmaFilePaths))
     # Create fig/ax
