@@ -1,0 +1,15 @@
+[Unit]
+Description=hdwx-hlma_fetch
+PartOf=hdwx.target
+
+[Service]
+ExecStart=$pathToPython hlmaFetch.py
+Restart=always
+RestartSec=30
+RuntimeMaxSec=600
+WorkingDirectory=$pathToClone/hdwx-hlma/
+User=$myUsername
+SyslogIdentifier=hdwx-hlma_fetch
+
+[Install]
+WantedBy=hdwx.target

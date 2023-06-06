@@ -2,7 +2,7 @@
 # Python-based plotting of Houston Lightning Mapping Array data for python-based HDWX
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
-from os import path, listdir, remove, system
+from os import path, listdir, remove
 import sys
 import pyart
 from pyxlma.lmalib.io import read as lma_read
@@ -11,12 +11,10 @@ from pyxlma.lmalib.grid import create_regular_grid, assign_regular_bins, events_
 from pyxlma.plot.xlma_plot_feature import color_by_time, plot_points, subset
 from pyxlma.plot.xlma_base_plot import subplot_labels, inset_view, BlankPlot
 from matplotlib import pyplot as plt
-from matplotlib import colors
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
 import numpy as np
 from metpy.plots import USCOUNTIES
-from matplotlib import colors as pltcolors
 import pandas as pd
 from datetime import datetime as dt, timedelta
 from pathlib import Path
@@ -24,7 +22,6 @@ import json
 import warnings
 import radarDataFetch
 import xarray as xr
-import atexit
 
 
 axExtent = [-99.5, -91, 26, 33.5]
@@ -36,14 +33,6 @@ if path.exists(path.join(basePath, "HDWX_helpers.py")):
     import HDWX_helpers
     hasHelpers = True
 
-
-
-@atexit.register
-def exitFunc():
-    if len(sys.argv) > 2:
-        print("Plotting complete for "+sys.argv[2]+"-minute "+sys.argv[1])
-        system("bash continuous.sh &")
-
 def set_size(w, h, ax=None):
     if not ax: ax=plt.gca()
     l = ax.figure.subplotpars.left
@@ -53,20 +42,6 @@ def set_size(w, h, ax=None):
     figw = float(w)/(r-l)
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
-
-def writeToStatus(stringToWrite):
-    print(stringToWrite)
-    stringToWrite = stringToWrite+"\n"
-    if path.exists(path.join(basePath, "status.txt")):
-        currentStatusFile = open(path.join(basePath, "status.txt"), "r")
-        currentStr = open(path.join(basePath, "status.txt"), "r").read()
-        currentStatusFile.close()
-    else:
-        currentStr = ""
-    if stringToWrite not in currentStr:
-        with open(path.join(basePath, "status.txt"), "a") as statw:
-            statw.write(stringToWrite)
-            statw.close()
 
 def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
     if time.minute % 2 != 0:
@@ -388,16 +363,6 @@ if __name__ == "__main__":
     now = dt.utcnow()
     # Get time one hour ago
     oneHourAgo = now - timedelta(hours=1)
-    # Avoid massive amounts of backfilling on first run by writing the first datetime plotted
-    if path.exists(path.join(basePath, "firstPlotDT.txt")):
-        readFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "r")
-        firstPlotTime = dt.strptime(readFirstPlotFile.read(), "%Y%m%d%H%M")
-        readFirstPlotFile.close()
-    else:
-        firstPlotTime = dt.utcnow()
-        writeFirstPlotFile = open(path.join(basePath, "firstPlotDT.txt"), "w")
-        writeFirstPlotFile.write(firstPlotTime.strftime("%Y%m%d%H%M"))
-        writeFirstPlotFile.close()
     if shouldPlot1min:
         if shouldPlotSrc:
             # We're plotting 1 minute VHF Sources!
@@ -414,7 +379,7 @@ if __name__ == "__main__":
                     continue
                 if timeOfFile.strftime("%H%M%S") in alreadyPlottedFrames:
                     continue
-                if timeOfFile < firstPlotTime:
+                if timeOfFile < oneHourAgo:
                     continue
                 makeSourcePlots([path.join(inputPath, file)])
         if shouldPlotFlash:
@@ -432,7 +397,7 @@ if __name__ == "__main__":
                     continue
                 if timeOfFile.strftime("%H%M%S") in alreadyPlottedFrames:
                     continue
-                if timeOfFile < firstPlotTime:
+                if timeOfFile < oneHourAgo:
                     continue
                 makeFlashPlots([path.join(inputPath, file)])
     if shouldPlot10min:
@@ -447,7 +412,7 @@ if __name__ == "__main__":
                 timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
                 if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedFrames:
                     continue
-                if timeOfLastFile < firstPlotTime:
+                if timeOfLastFile < oneHourAgo:
                     continue
                 filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
                 makeSourcePlots(filesToPlot)
@@ -462,7 +427,7 @@ if __name__ == "__main__":
                 timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
                 if timeOfLastFile.strftime("%H%M%S") in alreadyPlottedFrames:
                     continue
-                if timeOfLastFile < firstPlotTime:
+                if timeOfLastFile < oneHourAgo:
                     continue
                 filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
                 makeFlashPlots(filesToPlot)

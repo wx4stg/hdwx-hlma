@@ -1,0 +1,16 @@
+[Unit]
+Description=hdwx-hlma_gr2a
+PartOf=hdwx.target
+
+[Service]
+ExecStart=$pathToPython hlmaGR2A.py
+ExecStop=rsync -ulrH ./output/. $targetDir --exclude=productTypes/ --exclude="*.tmp"
+Restart=always
+RestartSec=30
+RuntimeMaxSec=600
+WorkingDirectory=$pathToClone/hdwx-hlma/
+User=$myUsername
+SyslogIdentifier=hdwx-hlma_gr2a
+
+[Install]
+WantedBy=hdwx.target

@@ -16,19 +16,6 @@ if path.exists(path.join(basePath, "HDWX_helpers.py")):
     import HDWX_helpers
     hasHelpers = True
 
-def writeToStatus(stringToWrite):
-    print(stringToWrite)
-    stringToWrite = stringToWrite+"\n"
-    if path.exists(path.join(basePath, "status.txt")):
-        currentStatusFile = open(path.join(basePath, "status.txt"), "r")
-        currentStr = open(path.join(basePath, "status.txt"), "r").read()
-        currentStatusFile.close()
-    else:
-        currentStr = ""
-    if stringToWrite not in currentStr:
-        with open(path.join(basePath, "status.txt"), "a") as statw:
-            statw.write(stringToWrite)
-            statw.close()
 
 
 def makeSrcPlacefile(lmaFilePaths):

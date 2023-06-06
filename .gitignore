@@ -1,10 +1,7 @@
 lightningin*
 output/
-status.txt
 radarInput/
-firstPlotDT.txt
 ftppassword.txt
 __pycache__/
-*lock.txt
 HDWX_helpers.py
 lastCleanDT.txt

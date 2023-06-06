@@ -1,0 +1,16 @@
+[Unit]
+Description=hdwx-hlma_plot_1min_flash
+PartOf=hdwx.target
+
+[Service]
+ExecStart=$pathToPython hlmaPlot.py flash 1
+ExecStop=rsync -ulrH ./output/. $targetDir --exclude=productTypes/ --exclude="*.tmp"
+Restart=always
+RestartSec=30
+RuntimeMaxSec=600
+WorkingDirectory=$pathToClone/hdwx-hlma/
+User=$myUsername
+SyslogIdentifier=hdwx-hlma_plot_1min_flash
+
+[Install]
+WantedBy=hdwx.target
