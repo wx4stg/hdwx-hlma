@@ -5,7 +5,7 @@ PartOf=hdwx.target
 [Service]
 ExecStart=$pathToPython hlmaFetch.py
 Restart=always
-RestartSec=30
+RestartSec=10
 RuntimeMaxSec=600
 WorkingDirectory=$pathToClone/hdwx-hlma/
 User=$myUsername
