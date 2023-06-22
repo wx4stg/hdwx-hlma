@@ -43,19 +43,28 @@ def set_size(w, h, ax=None):
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
 
-def addMRMSToFig(fig, ax, cbax, taxtext, time, productID):
+def addMRMSToFig(fig, ax, cbax, taxtext, time, productID, data="ReflectivityAtLowestAltitude"):
     if time.minute % 2 != 0:
         return
-    mrmsGribName = radarDataFetch.fetchRadarClosestToTime(time)
+    mrmsGribName = radarDataFetch.fetchRadarClosestToTime(time, data)
     if ".grib" in mrmsGribName:
         datasetFilePath = path.join(basePath, "radarInput", mrmsGribName)
         radarDS = xr.open_dataset(datasetFilePath)
         radarDS = radarDS.sel(latitude=slice(axExtent[3], axExtent[2]), longitude=slice(axExtent[0]+360, axExtent[1]+360))
-        radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
-        cmap = "pyart_ChaseSpectral"
-        vmin=-10
-        vmax=80
+        if data == "ReflectivityAtLowestAltitude":
+            radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 5, 0, 1))
+            cmap = "pyart_ChaseSpectral"
+            vmin=-10
+            vmax=80
+        elif data == "RadarOnly_QPE_01H":
+            radarData = np.ma.masked_array(radarDS.unknown.data, mask=np.where(radarDS.unknown.data > 0, 0, 1))/25.4
+            cmap = "viridis"
+            vmin=0
+            vmax=10
+            labels = ax.contour(radarDS.longitude, radarDS.latitude, radarData, levels=range(1, 99, 1), cmap="viridis", vmin=0, vmax=10, linewidths=0.5, transform=ccrs.PlateCarree(), zorder=5)
         rdr = ax.pcolormesh(radarDS.longitude, radarDS.latitude, radarData, cmap=cmap, vmin=vmin, vmax=vmax, transform=ccrs.PlateCarree(), zorder=5, alpha=0.5)
+        if productID == None:
+            return rdr
         if cbax is not None:
             cbax.set_position([.01,0.05,(ax.get_position().width/3),.01])
             cbax.xaxis.set_ticks_position("top")
@@ -111,8 +120,8 @@ def makeFlashPlots(lmaFilePaths):
     grid_t1 = np.asarray(dttuple[1]).astype('datetime64[ns]')
     time_range = (grid_t0, grid_t1+grid_dt, grid_dt)
     # We only want events with chi^2 less than 1
-    lmaData = lmaData[{"number_of_events":(lmaData.event_chi2 <= 1.0)}]
-    lmaData = cluster_flashes(lmaData)
+    lmaData = lmaData[{"number_of_events":(lmaData.event_chi2 <= 5.0)}]
+    lmaDataClustered = cluster_flashes(lmaData)
     lat_range = (axExtent[2], axExtent[3], 0.025)
     lon_range = (axExtent[0], axExtent[1], 0.025)
     alt_range = (0, 18e3, 1.0e3)
@@ -135,7 +144,7 @@ def makeFlashPlots(lmaFilePaths):
         'event_time':'grid_time_edge',
     }
     grid_ds = create_regular_grid(grid_edge_ranges, grid_center_names)
-    ds_ev = assign_regular_bins(grid_ds, lmaData, event_coord_names, pixel_id_var="event_pixel_id", append_indices=True)
+    ds_ev = assign_regular_bins(grid_ds, lmaDataClustered, event_coord_names, pixel_id_var="event_pixel_id", append_indices=True)
     grid_spatial_coords=['grid_time', None, 'grid_latitude', 'grid_longitude']
     event_spatial_vars = ('event_altitude', 'event_latitude', 'event_longitude')
     griddedLmaData = events_to_grid(ds_ev, grid_ds, min_points_per_flash=3, pixel_id_var="event_pixel_id", event_spatial_vars=event_spatial_vars, grid_spatial_coords=grid_spatial_coords)
@@ -150,7 +159,7 @@ def makeFlashPlots(lmaFilePaths):
         else:
             raise e
     # Plot station locations
-    ax.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
+    ax.scatter(lmaDataClustered["station_longitude"], lmaDataClustered["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     # Get a handle to a pixel
     px = 1/plt.rcParams["figure.dpi"]
     # Make the GIS plot have a decent resolution. This wont end up being exactly 1920 by 1080 
@@ -203,7 +212,81 @@ def makeFlashPlots(lmaFilePaths):
         addMRMSToFig(fig, ax, cbax, title, timeOfPlot, 153)
     # Close figure when done (memory management)
     plt.close(fig)
+    # Make a two panel lightning/radar plot
+    if len(lmaFilePaths) == 10:
+        twoPanelFig = plt.figure()
+        twoPanelFig.set_size_inches(1920*px, 1080*px)
+        twoPanelAx1 = twoPanelFig.add_axes([0.025, 0.2, 0.35, 0.9], projection=ccrs.epsg(3857))
+        try:
+            flashPcm = twoPanelAx1.pcolormesh(griddedLmaData.flash_extent_density.grid_longitude, griddedLmaData.flash_extent_density.grid_latitude, griddedLmaData.flash_extent_density.data, cmap="plasma", vmin=1, vmax=10, transform=ccrs.PlateCarree(), zorder=4)
+        except Exception as e:
+            if "GEOSContains" in str(e):
+                return
+            else:
+                raise e
+        twoPanelAx1.set_extent(axExtent, crs=ccrs.PlateCarree())
+        if timeOfPlot.minute % 2 == 0:
+            timeForRadar = timeOfPlot
+        else:
+            timeForRadar = timeOfPlot - timedelta(minutes=1)
+        rdr1 = addMRMSToFig(twoPanelFig, twoPanelAx1, None, None, timeForRadar, None, "ReflectivityAtLowestAltitude")
+        cbax11 = twoPanelFig.add_axes([0.425, twoPanelAx1.get_position().y0, 0.01, twoPanelAx1.get_position().height])
+        twoPanelFig.colorbar(rdr1, cax=cbax11, orientation="vertical", label="Reflectivity (dBZ)", extend="max")
+        cbax11.yaxis.set_ticks_position("left")
+        cbax11.yaxis.set_label_position("left")
+        cbax12 = twoPanelFig.add_axes([0.45, twoPanelAx1.get_position().y0, 0.01, twoPanelAx1.get_position().height])
+        twoPanelFig.colorbar(flashPcm, cax=cbax12, orientation="vertical", label="Flash Extent Density (flash/km^2/min)", extend="max")
+        twoPanelAx2 = twoPanelFig.add_axes([0.5, .2, 0.35, 0.9], projection=ccrs.epsg(3857))
+        twoPanelAx2.set_extent(axExtent, crs=ccrs.PlateCarree())
+        latRange = [axExtent[2], axExtent[3]]
+        lonRange = [axExtent[0], axExtent[1]]
+        altRange = [0, 21]
+        lonSet, latSet, altSet, timeSet, selectedData = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, lmaData.event_altitude.values/1000, pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, altRange, [startTimeOfPlot, timeOfPlot], 5.0, 6.0)
+        vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
+        rdr2 = addMRMSToFig(twoPanelFig, twoPanelAx2, None, None, timeForRadar, None, "RadarOnly_QPE_01H")
+        cbax21 = twoPanelFig.add_axes([0.9, twoPanelAx1.get_position().y0, 0.01, twoPanelAx1.get_position().height])
+        twoPanelFig.colorbar(rdr2, cax=cbax21, orientation="vertical", label="1-hr radar estimated rainfall (in.)", extend="max")
+        cbax21.yaxis.set_ticks_position("left")
+        cbax21.yaxis.set_label_position("left")
+        cbax22 = twoPanelFig.add_axes([0.925, twoPanelAx1.get_position().y0, 0.01, twoPanelAx1.get_position().height])
+        # if len(relcolors) > 0:
+        vhfSct = twoPanelAx2.scatter(lonSet, latSet, 1, relcolors, ",", transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", vmin=vmin, vmax=vmax)
+        twoPanelFig.colorbar(vhfSct, cax=cbax22, label=f"Seconds after {startTimeOfPlot.strftime('%-d %b %Y %H%MZ')}")
     
+        twoPanelAx1.scatter(lmaDataClustered["station_longitude"], lmaDataClustered["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
+        twoPanelAx2.scatter(lmaDataClustered["station_longitude"], lmaDataClustered["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
+    
+        twoPanelAx1.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
+        twoPanelAx1.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
+        twoPanelAx1.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
+
+        twoPanelAx2.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
+        twoPanelAx2.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
+        twoPanelAx2.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
+
+        twoPanelAx1.set_title("Reflectivity + Flash Extent Density")
+        twoPanelAx2.set_title("1-hr QPE + VHF Sources")
+
+        twoPanelAx3 = twoPanelFig.add_axes([twoPanelAx1.get_position().x0, 0.14, cbax22.get_position().x1 - twoPanelAx1.get_position().x0, 0.15])
+        timeDensity = lmaData.event_time.groupby(lmaData.event_time.dt.minute).count()
+        twoPanelAx3.plot(timeDensity.minute, timeDensity.data, color="black", linewidth=1)
+        twoPanelAx3.scatter(timeDensity.minute, timeDensity.data, color="black", s=5)
+        twoPanelAx3.set_xlabel("Minute of Hour")
+        twoPanelAx3.set_ylabel("Number of Sources")
+        twoPanelAx3.yaxis.set_label_position("right")
+        lax = twoPanelFig.add_axes([0.75, 0.01, 0.25, 0.15])
+        if hasHelpers:
+            HDWX_helpers.dressImage(twoPanelFig, None, "HLMA Flash Flood Analysis", timeOfPlot, lax=lax)
+        lax.set_position([0.74, 0.01, lax.get_position().width, lax.get_position().height])
+
+        lolItsThreePanelsNow = path.join(basePath, "output", "products", "hlma", "ffanalysis", runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
+        Path(path.dirname(lolItsThreePanelsNow)).mkdir(parents=True, exist_ok=True)
+        if hasHelpers:
+            HDWX_helpers.saveImage(twoPanelFig, lolItsThreePanelsNow)
+            HDWX_helpers.writeJson(basePath, 157, timeOfPlot, dt.strftime(timeOfPlot, "%M.png"), timeOfPlot, ["0,0", "0,0"], 60)
+        else:
+            twoPanelFig.savefig(lolItsThreePanelsNow)
+        
 
 def makeSourcePlots(lmaFilePaths):
     # Silence error_bad_lines warning when reading in LMA data
@@ -226,11 +309,11 @@ def makeSourcePlots(lmaFilePaths):
     fig = plt.figure()
     ax = plt.axes(projection=ccrs.epsg(3857))
     # We want to "mask out" points where the event chi^2 is greater than 1 and points outside our lat/lon/alt range
-    latRange = [float(lmaData.network_center_latitude)-1.5, float(lmaData.network_center_latitude)+1.5]
-    lonRange = [float(lmaData.network_center_longitude)-1.5, float(lmaData.network_center_longitude)+1.5]
+    latRange = [axExtent[2], axExtent[3]]
+    lonRange = [axExtent[0], axExtent[1]]
     altRange = [0, 21]
     # Subset the data to our parameters (again... I was unsuccessful when attempting to get pyxlma to read in the masked arrays from earlier)
-    lonSet, latSet, altSet, timeSet, selectedData = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, lmaData.event_altitude.values/1000, pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, altRange, [startTimeOfPlot, timeOfPlot], 1.0, 6.0)
+    lonSet, latSet, altSet, timeSet, selectedData = subset(lmaData.event_longitude.values, lmaData.event_latitude.values, lmaData.event_altitude.values/1000, pd.Series(lmaData.event_time), lmaData.event_chi2.values, lmaData.event_stations.values, lonRange, latRange, altRange, [startTimeOfPlot, timeOfPlot], 5.0, 6.0)
     vmin, vmax, relcolors = color_by_time(timeSet, [startTimeOfPlot, timeOfPlot])
     if vmin < 1:
         vmin = 0
@@ -315,7 +398,6 @@ def makeSourcePlots(lmaFilePaths):
         lmaPlotFig.savefig(lmaSavePath)
     if len(lmaFilePaths) == 1:
         addMRMSToFig(lmaPlotFig, lmaPlot.ax_plan, None, None, timeOfPlot, 156)
-    
 
 def getAlreadyPlottedFrames(productID):
     # Create (empty, but add to it in a sec...) list representing already plotted frames

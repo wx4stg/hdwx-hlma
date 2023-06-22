@@ -13,12 +13,12 @@ import shutil
 
 basePath = path.realpath(path.dirname(__file__))
 
-def downloadFile(fileName):
+def downloadFile(fileName, data):
     output = path.join(basePath, "radarInput", fileName)
     if path.exists(path.join(basePath, "radarInput", fileName.replace(".gz", ""))):
         return output.replace(".gz", "")
     print("Downloading "+fileName)
-    urlToFetch = "https://mrms.ncep.noaa.gov/data/2D/ReflectivityAtLowestAltitude/"+fileName
+    urlToFetch = f"https://mrms.ncep.noaa.gov/data/2D/{data}/{fileName}"
     mrmsData = requests.get(urlToFetch)
     if mrmsData.status_code == 200:
         with open(output, "wb") as fileWrite:
@@ -29,13 +29,16 @@ def downloadFile(fileName):
         remove(output)
         return output.replace(".gz", "")
 
-def fetchRadarClosestToTime(time):
+def fetchRadarClosestToTime(time, data):
     Path(path.join(basePath, "radarInput")).mkdir(parents=True, exist_ok=True)
-    gribList = pd.read_html("https://mrms.ncep.noaa.gov/data/2D/ReflectivityAtLowestAltitude/")[0].dropna(how="any")
+    gribList = pd.read_html(f"https://mrms.ncep.noaa.gov/data/2D/{data}/")[0].dropna(how="any")
     gribList = gribList[~gribList.Name.str.contains("latest") == True].reset_index()
-    gribList["pyDateTimes"] = [dt.strptime(filename, "MRMS_ReflectivityAtLowestAltitude_00.50_%Y%m%d-%H%M%S.grib2.gz") for filename in gribList["Name"]]
+    if data == "ReflectivityAtLowestAltitude":
+        gribList["pyDateTimes"] = [dt.strptime(filename, "MRMS_ReflectivityAtLowestAltitude_00.50_%Y%m%d-%H%M%S.grib2.gz") for filename in gribList["Name"]]
+    elif data == "RadarOnly_QPE_01H":
+        gribList["pyDateTimes"] = [dt.strptime(filename, "MRMS_RadarOnly_QPE_01H_00.00_%Y%m%d-%H%M%S.grib2.gz") for filename in gribList["Name"]]
     gribList = gribList.set_index(["pyDateTimes"])
     for moasicTime in reversed(gribList.index):
         if moasicTime < time:
             if moasicTime >= (time - timedelta(minutes=2)):
-                return downloadFile(gribList[gribList.index == moasicTime]["Name"][0])
+                return downloadFile(gribList[gribList.index == moasicTime]["Name"][0], data)
