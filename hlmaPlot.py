@@ -167,25 +167,26 @@ def makeFlashPlots(lmaFilePaths):
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
-    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
-    # Use os.path to preserve Windows compatibility
-    gisProductPath = path.join("gisproducts", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
-    # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
-    runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
-    # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
-    gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
-    # Create target directory if it doesn't already exist
-    Path(path.dirname(gisSavePath)).mkdir(parents=True, exist_ok=True)
-    # Get the exact extent of just the axes without the matplotlib auto-generated whitespace
-    extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
-    # save the figure, but trim the whitespace
-    # we do this because including the whitespace would make the data not align to the GIS information in the metadata
-    if hasHelpers:
-        HDWX_helpers.saveImage(fig, gisSavePath, transparent=True, bbox_inches=extent)
-        # Write metadata for the product
-        HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
-    else:
-        fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
+    if "--no-gis" not in sys.argv:
+        # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+        # Use os.path to preserve Windows compatibility
+        gisProductPath = path.join("gisproducts", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
+        # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
+        runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
+        # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
+        gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
+        # Create target directory if it doesn't already exist
+        Path(path.dirname(gisSavePath)).mkdir(parents=True, exist_ok=True)
+        # Get the exact extent of just the axes without the matplotlib auto-generated whitespace
+        extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
+        # save the figure, but trim the whitespace
+        # we do this because including the whitespace would make the data not align to the GIS information in the metadata
+        if hasHelpers:
+            HDWX_helpers.saveImage(fig, gisSavePath, transparent=True, bbox_inches=extent)
+            # Write metadata for the product
+            HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
+        else:
+            fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -330,25 +331,26 @@ def makeSourcePlots(lmaFilePaths):
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
-    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
-    # Use os.path to preserve Windows compatibility
-    gisProductPath = path.join("gisproducts", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
-    # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
-    runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
-    # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
-    gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
-    # Create target directory if it doesn't already exist
-    Path(path.dirname(gisSavePath)).mkdir(parents=True, exist_ok=True)
-    # Get the exact extent of just the axes without the matplotlib auto-generated whitespace
-    extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
-    # save the figure, but trim the whitespace
-    # we do this because including the whitespace would make the data not align to the GIS information in the metadata
-    # Write metadata for the product
-    if hasHelpers:
-        HDWX_helpers.saveImage(fig, gisSavePath, transparent=True, bbox_inches=extent)
-        HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
-    else:
-        fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
+    if "--no-gis" not in sys.argv:
+        # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+        # Use os.path to preserve Windows compatibility
+        gisProductPath = path.join("gisproducts", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
+        # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
+        runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
+        # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
+        gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
+        # Create target directory if it doesn't already exist
+        Path(path.dirname(gisSavePath)).mkdir(parents=True, exist_ok=True)
+        # Get the exact extent of just the axes without the matplotlib auto-generated whitespace
+        extent = ax.get_tightbbox(fig.canvas.get_renderer()).transformed(fig.dpi_scale_trans.inverted())
+        # save the figure, but trim the whitespace
+        # we do this because including the whitespace would make the data not align to the GIS information in the metadata
+        # Write metadata for the product
+        if hasHelpers:
+            HDWX_helpers.saveImage(fig, gisSavePath, transparent=True, bbox_inches=extent)
+            HDWX_helpers.writeJson(basePath, gisProductID, timeOfPlot, path.basename(gisSavePath), timeOfPlot, [str(axExtent[2])+","+str(axExtent[0]), str(axExtent[3])+","+str(axExtent[1])], 60)
+        else:
+            fig.savefig(gisSavePath, transparent=True, bbox_inches=extent)
     # For the "static"/non-GIS/opaque image, add county/state/coastline borders
     ax.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)

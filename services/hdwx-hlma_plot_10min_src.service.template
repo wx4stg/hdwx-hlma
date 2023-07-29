@@ -3,7 +3,7 @@ Description=hdwx-hlma_plot_10min_src
 PartOf=hdwx.target
 
 [Service]
-ExecStart=$pathToPython hlmaPlot.py src 10
+ExecStart=$pathToPython hlmaPlot.py src 10 $shouldGIS
 ExecStop=rsync -ulrH ./output/. $targetDir --exclude=productTypes/ --exclude="*.tmp"
 Restart=always
 RestartSec=30
