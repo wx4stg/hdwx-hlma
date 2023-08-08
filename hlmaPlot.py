@@ -167,12 +167,12 @@ def makeFlashPlots(lmaFilePaths):
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
+    # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
+    runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
     if "--no-gis" not in sys.argv:
         # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
         # Use os.path to preserve Windows compatibility
         gisProductPath = path.join("gisproducts", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
-        # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
-        runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
         # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
         gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
         # Create target directory if it doesn't already exist
@@ -330,13 +330,13 @@ def makeSourcePlots(lmaFilePaths):
     # as it's overridden by the next line "set_extent", but should improve the resolution enough
     set_size(1920*px, 1080*px, ax=ax)
     # Now we set the extent to the coordinates we want
+    # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
+    runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
     if "--no-gis" not in sys.argv:
         # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
         # Use os.path to preserve Windows compatibility
         gisProductPath = path.join("gisproducts", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
-        # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
-        runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
         # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
         gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
         # Create target directory if it doesn't already exist
