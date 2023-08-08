@@ -15,13 +15,13 @@ if __name__ == '__main__':
     now = dt.utcnow()
     # Get the time one hour ago
     oneHourAgo = now - timedelta(hours=1)
-    lastHourJsonPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
+    lastHourJsonPath = path.join(basePath, "output", "metadata", "products", "155", dt.strftime(oneHourAgo, "%Y%m%d%H00")+".json")
     generatedFrames = list()
     if path.exists(lastHourJsonPath):
         with open(lastHourJsonPath, "r") as jsonRead:
             lastHourDict = json.load(jsonRead)
         [generatedFrames.append(frame["valid"]) for frame in lastHourDict["productFrames"]]
-    currentHourJsonPath = path.join(basePath, "output", "metadata", "products", "100", dt.strftime(now, "%Y%m%d%H00")+".json")
+    currentHourJsonPath = path.join(basePath, "output", "metadata", "products", "155", dt.strftime(now, "%Y%m%d%H00")+".json")
     if path.exists(currentHourJsonPath):
         with open(currentHourJsonPath, "r") as jsonRead:
             currentHourDict = json.load(jsonRead)
