@@ -12,6 +12,7 @@ from pyxlma.plot.xlma_plot_feature import color_by_time, plot_points, subset
 from pyxlma.plot.xlma_base_plot import subplot_labels, inset_view, BlankPlot
 from matplotlib import pyplot as plt
 from matplotlib import dates as pltdates
+from matplotlib.patheffects import withStroke
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
 import numpy as np
@@ -275,6 +276,7 @@ def makeFlashPlots(lmaFilePaths):
         datesForFFPlot = [firstFFDate + timedelta(minutes=i) for i in range(0, 10)]
         twoPanelAx3.plot(datesForFFPlot, timeDensity.data, color="black", linewidth=1)
         twoPanelAx3.scatter(datesForFFPlot, timeDensity.data, color="black", s=5)
+        twoPanelAx3.text(datesForFFPlot[-1], 0.01, f"{int(timeDensity.data[-1])} src", ha="center", va="bottom", path_effects=[withStroke(linewidth=3, foreground="white")], transform=twoPanelAx3.get_xaxis_transform())
         twoPanelAx3.xaxis.set_major_formatter(pltdates.DateFormatter("%H:%MZ"))
         twoPanelAx3.set_xlabel("Time")
         twoPanelAx3.set_ylabel("Number of Sources")
