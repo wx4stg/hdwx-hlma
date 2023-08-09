@@ -447,7 +447,7 @@ if __name__ == "__main__":
         if shouldPlotSrc:
             # We're plotting 1 minute VHF Sources!
             # Get the frames that have already been plotted
-            alreadyPlottedFrames = getAlreadyPlottedFrames(140)
+            alreadyPlottedFrames = getAlreadyPlottedFrames(141)
             # Plot every file in the input directory
             inputDirContents = sorted(listdir(inputPath), reverse=True)
             for file in inputDirContents:
@@ -465,7 +465,7 @@ if __name__ == "__main__":
         if shouldPlotFlash:
             # We're plotting 1 minute flash extent density!
             # Get the frames that have already been plotted
-            alreadyPlottedFrames = getAlreadyPlottedFrames(146)
+            alreadyPlottedFrames = getAlreadyPlottedFrames(147)
             # Plot every file in the input directory
             inputDirContents = sorted(listdir(inputPath), reverse=True)
             for file in inputDirContents:
@@ -484,7 +484,7 @@ if __name__ == "__main__":
         if shouldPlotSrc:
             # We're plotting 10 minute VHF Sources!
             # Get the frames that have already been plotted
-            alreadyPlottedFrames = getAlreadyPlottedFrames(143)
+            alreadyPlottedFrames = getAlreadyPlottedFrames(144)
             inputDirContents = sorted(listdir(inputPath), reverse=True)
             for i in range(10, len(inputDirContents)):
                 lastFileInRange = inputDirContents[i]
@@ -499,7 +499,7 @@ if __name__ == "__main__":
         if shouldPlotFlash:
             # We're plotting 10 minute flash extent density!
             # Get the frames that have already been plotted
-            alreadyPlottedFrames = getAlreadyPlottedFrames(148)
+            alreadyPlottedFrames = getAlreadyPlottedFrames(149)
             inputDirContents = sorted(listdir(inputPath), reverse=True)
             for i in range(10, len(inputDirContents)):
                 lastFileInRange = inputDirContents[i]
