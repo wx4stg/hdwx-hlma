@@ -11,6 +11,7 @@ from pyxlma.lmalib.grid import create_regular_grid, assign_regular_bins, events_
 from pyxlma.plot.xlma_plot_feature import color_by_time, plot_points, subset
 from pyxlma.plot.xlma_base_plot import subplot_labels, inset_view, BlankPlot
 from matplotlib import pyplot as plt
+from matplotlib import dates as pltdates
 from cartopy import crs as ccrs
 from cartopy import feature as cfeat
 import numpy as np
@@ -270,9 +271,12 @@ def makeFlashPlots(lmaFilePaths):
 
         twoPanelAx3 = twoPanelFig.add_axes([twoPanelAx1.get_position().x0, 0.14, cbax22.get_position().x1 - twoPanelAx1.get_position().x0, 0.15])
         timeDensity = lmaData.event_time.groupby(lmaData.event_time.dt.minute).count()
-        twoPanelAx3.plot(timeDensity.minute, timeDensity.data, color="black", linewidth=1)
-        twoPanelAx3.scatter(timeDensity.minute, timeDensity.data, color="black", s=5)
-        twoPanelAx3.set_xlabel("Minute of Hour")
+        firstFFDate = pd.Timestamp(lmaData.event_time.data[-1]).to_pydatetime().replace(second=0, microsecond=0)
+        datesForFFPlot = [firstFFDate + timedelta(minutes=i) for i in range(0, 10)]
+        twoPanelAx3.plot(datesForFFPlot, timeDensity.data, color="black", linewidth=1)
+        twoPanelAx3.scatter(datesForFFPlot, timeDensity.data, color="black", s=5)
+        twoPanelAx3.xaxis.set_major_formatter(pltdates.DateFormatter("%H:%MZ"))
+        twoPanelAx3.set_xlabel("Time")
         twoPanelAx3.set_ylabel("Number of Sources")
         twoPanelAx3.yaxis.set_label_position("right")
         lax = twoPanelFig.add_axes([0.75, 0.01, 0.25, 0.15])
