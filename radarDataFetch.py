@@ -18,27 +18,33 @@ def downloadFile(fileName, data):
     output = path.join(basePath, "radarInput", fileName)
     if path.exists(path.join(basePath, "radarInput", fileName.replace(".gz", ""))):
         return output.replace(".gz", "")
-    print("Downloading "+fileName)
     urlToFetch = f"https://mrms.ncep.noaa.gov/data/2D/{data}/{fileName}"
-    mrmsData = requests.get(urlToFetch)
-    if mrmsData.status_code == 200:
-        with open(output, "wb") as fileWrite:
-            fileWrite.write(mrmsData.content)
-        with gzip.open(output, "rb") as f_in:
-            with open(output.replace(".gz", ""), "wb") as f_out:
-                shutil.copyfileobj(f_in, f_out)
-        remove(output)
-        return output.replace(".gz", "")
+    print("Downloading "+fileName)
+    try:
+        mrmsData = requests.get(urlToFetch)
+        if mrmsData.status_code == 200:
+            mrmsData = mrmsData.content
+    except requests.exceptions.SSLError:
+        import subprocess
+        mrmsDataProc = subprocess.run(["curl", urlToFetch], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        mrmsData = mrmsDataProc.stdout
+    with open(output, "wb") as fileWrite:
+        fileWrite.write(mrmsData)
+    with gzip.open(output, "rb") as f_in:
+        with open(output.replace(".gz", ""), "wb") as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    remove(output)
+    return output.replace(".gz", "")
 
 def fetchRadarClosestToTime(time, data):
     Path(path.join(basePath, "radarInput")).mkdir(parents=True, exist_ok=True)
     try:
         gribList = pd.read_html(f"https://mrms.ncep.noaa.gov/data/2D/{data}/")[0].dropna(how="any")
-    except urllib.error.URLError as e:
+    except urllib.error.URLError:
         import subprocess
         from io import BytesIO
-        gribListCurlProc = subprocess.run(["curl", f"https://mrms.ncep.noaa.gov/data/2D/{data}/"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-        gribList = pd.read_html(BytesIO(gribListCurlProc.stdout.encode("utf-8")))[0].dropna(how="any")
+        gribListCurlProc = subprocess.run(["curl", f"https://mrms.ncep.noaa.gov/data/2D/{data}/"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        gribList = pd.read_html(BytesIO(gribListCurlProc.stdout))[0].dropna(how="any")
     gribList = gribList[~gribList.Name.str.contains("latest") == True].reset_index()
     if data == "ReflectivityAtLowestAltitude":
         gribList["pyDateTimes"] = [dt.strptime(filename, "MRMS_ReflectivityAtLowestAltitude_00.50_%Y%m%d-%H%M%S.grib2.gz") for filename in gribList["Name"]]
