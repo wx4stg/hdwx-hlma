@@ -9,6 +9,7 @@ from datetime import datetime as dt, timedelta
 import requests
 import gzip
 import shutil
+import urllib
 
 
 basePath = path.realpath(path.dirname(__file__))
@@ -31,7 +32,13 @@ def downloadFile(fileName, data):
 
 def fetchRadarClosestToTime(time, data):
     Path(path.join(basePath, "radarInput")).mkdir(parents=True, exist_ok=True)
-    gribList = pd.read_html(f"https://mrms.ncep.noaa.gov/data/2D/{data}/")[0].dropna(how="any")
+    try:
+        gribList = pd.read_html(f"https://mrms.ncep.noaa.gov/data/2D/{data}/")[0].dropna(how="any")
+    except urllib.error.URLError as e:
+        import subprocess
+        from io import BytesIO
+        gribListCurlProc = subprocess.run(["curl", f"https://mrms.ncep.noaa.gov/data/2D/{data}/"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        gribList = pd.read_html(BytesIO(gribListCurlProc.stdout.encode("utf-8")))[0].dropna(how="any")
     gribList = gribList[~gribList.Name.str.contains("latest") == True].reset_index()
     if data == "ReflectivityAtLowestAltitude":
         gribList["pyDateTimes"] = [dt.strptime(filename, "MRMS_ReflectivityAtLowestAltitude_00.50_%Y%m%d-%H%M%S.grib2.gz") for filename in gribList["Name"]]
