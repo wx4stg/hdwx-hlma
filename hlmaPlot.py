@@ -255,10 +255,10 @@ def makeFlashPlots(lmaFilePaths):
         # if len(relcolors) > 0:
         vhfSct = twoPanelAx2.scatter(lonSet, latSet, 1, relcolors, ",", transform=ccrs.PlateCarree(), zorder=4, cmap="rainbow", vmin=vmin, vmax=vmax)
         twoPanelFig.colorbar(vhfSct, cax=cbax22, label=f"Seconds after {startTimeOfPlot.strftime('%-d %b %Y %H%MZ')}")
-    
+
         twoPanelAx1.scatter(lmaDataClustered["station_longitude"], lmaDataClustered["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
         twoPanelAx2.scatter(lmaDataClustered["station_longitude"], lmaDataClustered["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
-    
+
         twoPanelAx1.add_feature(USCOUNTIES.with_scale("5m"), edgecolor="gray", zorder=2)
         twoPanelAx1.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
         twoPanelAx1.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
@@ -293,7 +293,7 @@ def makeFlashPlots(lmaFilePaths):
             HDWX_helpers.writeJson(basePath, 157, timeOfPlot, dt.strftime(timeOfPlot, "%M.png"), timeOfPlot, ["0,0", "0,0"], 60)
         else:
             twoPanelFig.savefig(lolItsThreePanelsNow)
-        
+
 
 def makeSourcePlots(lmaFilePaths):
     # Silence error_bad_lines warning when reading in LMA data
@@ -492,7 +492,7 @@ if __name__ == "__main__":
             # Get the frames that have already been plotted
             alreadyPlottedFrames = getAlreadyPlottedFrames(144)
             inputDirContents = sorted(listdir(inputPath), reverse=True)
-            for i in range(10, len(inputDirContents)):
+            for i in range(0, len(inputDirContents)-10):
                 lastFileInRange = inputDirContents[i]
                 timeOfLastFileArr = lastFileInRange.split("_")
                 timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
@@ -500,14 +500,14 @@ if __name__ == "__main__":
                     continue
                 if timeOfLastFile < oneHourAgo:
                     continue
-                filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
+                filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[i:i+10]]
                 makeSourcePlots(filesToPlot)
         if shouldPlotFlash:
             # We're plotting 10 minute flash extent density!
             # Get the frames that have already been plotted
             alreadyPlottedFrames = getAlreadyPlottedFrames(149)
             inputDirContents = sorted(listdir(inputPath), reverse=True)
-            for i in range(10, len(inputDirContents)):
+            for i in range(0, len(inputDirContents)-10):
                 lastFileInRange = inputDirContents[i]
                 timeOfLastFileArr = lastFileInRange.split("_")
                 timeOfLastFile = dt.strptime("20"+timeOfLastFileArr[1]+timeOfLastFileArr[2], "%Y%m%d%H%M%S") + timedelta(minutes=1)
@@ -515,5 +515,6 @@ if __name__ == "__main__":
                     continue
                 if timeOfLastFile < oneHourAgo:
                     continue
-                filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[(i-10):i]]
+                print(timeOfLastFile)
+                filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[i:i+10]]
                 makeFlashPlots(filesToPlot)
