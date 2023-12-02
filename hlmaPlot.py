@@ -273,7 +273,7 @@ def makeFlashPlots(lmaFilePaths):
         twoPanelAx3 = twoPanelFig.add_axes([twoPanelAx1.get_position().x0, 0.14, cbax22.get_position().x1 - twoPanelAx1.get_position().x0, 0.15])
         timeDensity = lmaData.event_time.groupby(lmaData.event_time.dt.minute).count()
         firstFFDate = pd.Timestamp(lmaData.event_time.data[-1]).to_pydatetime().replace(second=0, microsecond=0)
-        datesForFFPlot = [firstFFDate + timedelta(minutes=i) for i in range(0, 10)]
+        datesForFFPlot = [firstFFDate + timedelta(minutes=i+1, seconds=30) for i in range(len(timeDensity.minute))]
         twoPanelAx3.plot(datesForFFPlot, timeDensity.data, color="black", linewidth=1)
         twoPanelAx3.scatter(datesForFFPlot, timeDensity.data, color="black", s=5)
         twoPanelAx3.text(datesForFFPlot[-1], 0.01, f"{int(timeDensity.data[-1])} src", ha="center", va="bottom", path_effects=[withStroke(linewidth=3, foreground="white")], transform=twoPanelAx3.get_xaxis_transform())
@@ -515,6 +515,5 @@ if __name__ == "__main__":
                     continue
                 if timeOfLastFile < oneHourAgo:
                     continue
-                print(timeOfLastFile)
                 filesToPlot = [path.join(inputPath, fileToInclude) for fileToInclude in inputDirContents[i:i+10]]
                 makeFlashPlots(filesToPlot)
