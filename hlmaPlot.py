@@ -73,7 +73,7 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID, data="ReflectivityAtLo
             cbax.tick_params(axis="x", labelsize=9)
             cbax.xaxis.set_label_position("top")
         if taxtext is not None:
-            taxtext.set_text(taxtext.get_text().replace("Houston", "MRMS LL Reflectivity + Houston"))
+            taxtext.set_text(taxtext.get_text().replace("West Texas", "MRMS LL Reflectivity + West Texas"))
         cbaxRdr = fig.add_axes([.01,0.035,(ax.get_position().width/3),.01])
         fig.colorbar(rdr, cax=cbaxRdr, orientation="horizontal", extend="max")
         cbaxRdr.set_xlabel("Reflectivity (dBZ)", fontsize=9, labelpad=1)
@@ -86,7 +86,7 @@ def addMRMSToFig(fig, ax, cbax, taxtext, time, productID, data="ReflectivityAtLo
             cbax.set_xlabel("Flash Extent Density (Flashes/km^2/min)", fontsize=9)
         elif productID == 156:
             lightType = "src-analysis"
-        productPath = path.join("products", "hlma", "mrms-"+lightType)
+        productPath = path.join("products", "wtlma", "mrms-"+lightType)
         runPathExtension = path.join(time.strftime("%Y"), time.strftime("%m"), time.strftime("%d"), time.strftime("%H")+"00")
         Path(path.join(basePath, "output", productPath, runPathExtension)).mkdir(parents=True, exist_ok=True)
         if hasHelpers:
@@ -172,9 +172,9 @@ def makeFlashPlots(lmaFilePaths):
     # Create a path oobject to 'runPathExtension', <year>/<month>/<day>/<hour>00/
     runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
     if "--no-gis" not in sys.argv:
-        # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+        # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/wtlma/vhf/ 
         # Use os.path to preserve Windows compatibility
-        gisProductPath = path.join("gisproducts", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
+        gisProductPath = path.join("gisproducts", "wtlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
         # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
         gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
         # Create target directory if it doesn't already exist
@@ -194,11 +194,11 @@ def makeFlashPlots(lmaFilePaths):
     ax.add_feature(cfeat.STATES.with_scale("10m"), linewidth=0.5, zorder=3)
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
     # Apply standard HDWX branding to the image
-    HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density", timeOfPlot, plotHandle=flashPcm, cbticks=range(1, 11), cbextend="max", colorbarLabel="Flash Extent Density (Flashes/km^2/min)")
+    HDWX_helpers.dressImage(fig, ax, "West Texas LMA "+str(numMins*len(lmaFilePaths))+"-minute Flash Extent Density", timeOfPlot, plotHandle=flashPcm, cbticks=range(1, 11), cbextend="max", colorbarLabel="Flash Extent Density (Flashes/km^2/min)")
     title = fig.axes[2].get_children()[0]
     cbax = fig.axes[1]
-    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
-    staticProductPath = path.join("products", "hlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
+    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/wtlma/vhf/ 
+    staticProductPath = path.join("products", "wtlma", "flash-"+str(numMins*len(lmaFilePaths))+"min")
     # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
     staticSavePath = path.join(basePath, "output", staticProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     # Create save directory if it doesn't already exist
@@ -340,9 +340,9 @@ def makeSourcePlots(lmaFilePaths):
     ax.set_extent(axExtent, crs=ccrs.PlateCarree())
     runPathExt = path.join(dt.strftime(timeOfPlot, "%Y"), dt.strftime(timeOfPlot, "%m"), dt.strftime(timeOfPlot, "%d"), dt.strftime(timeOfPlot, "%H")+"00")
     if "--no-gis" not in sys.argv:
-        # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
+        # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/wtlma/vhf/ 
         # Use os.path to preserve Windows compatibility
-        gisProductPath = path.join("gisproducts", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
+        gisProductPath = path.join("gisproducts", "wtlma", "vhf-"+str(len(lmaFilePaths))+"min")
         # Target path for the "GIS"/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
         gisSavePath = path.join(basePath, "output", gisProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
         # Create target directory if it doesn't already exist
@@ -363,13 +363,13 @@ def makeSourcePlots(lmaFilePaths):
     ax.add_feature(cfeat.COASTLINE.with_scale("10m"), linewidth=0.5, zorder=3)
     # Apply standard HDWX branding to the image
     if len(relcolors) > 0:
-        HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=vhfSct, cbextend="neither", colorbarLabel="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
+        HDWX_helpers.dressImage(fig, ax, "West Texas LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=vhfSct, cbextend="neither", colorbarLabel="Seconds after "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ"))
     else:
-        HDWX_helpers.dressImage(fig, ax, "Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=None, cbextend="neither", colorbarLabel="No VHF Sources")
+        HDWX_helpers.dressImage(fig, ax, "West Texas LMA "+str(len(lmaFilePaths))+"-minute VHF Sources", timeOfPlot, plotHandle=None, cbextend="neither", colorbarLabel="No VHF Sources")
     title = fig.axes[2].get_children()[0]
     cbax = fig.axes[1]
-    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/hlma/vhf/ 
-    staticProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min")
+    # Create a path object to 'productPath' (as defined by the HDWX API), in this case gisproducts/wtlma/vhf/ 
+    staticProductPath = path.join("products", "wtlma", "vhf-"+str(len(lmaFilePaths))+"min")
     # Target path for the "static"/non-GIS/transparent image is output/<gisProductPath>/<runPathExtension>/<minute>.png
     staticSavePath = path.join(basePath, "output", staticProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     # Create save directory if it doesn't already exist
@@ -387,14 +387,14 @@ def makeSourcePlots(lmaFilePaths):
     # Close figure when done (memory management)
     plt.close(fig)
     # The LMA community has come up with a pretty cool plot of charge density vs lat, lon, time, and altitude, lets make one!
-    lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=altRange, tlim=[startTimeOfPlot, timeOfPlot], title="Houston LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
+    lmaPlot = BlankPlot(startTimeOfPlot, bkgmap=True, xlim=lonRange, ylim=latRange, zlim=altRange, tlim=[startTimeOfPlot, timeOfPlot], title="West Texas LMA "+str(len(lmaFilePaths))+"-minute VHF Sources\nValid "+startTimeOfPlot.strftime("%-d %b %Y %H%MZ")+" through "+timeOfPlot.strftime("%H%MZ"))
     # Plot station locations
     lmaPlot.ax_plan.scatter(lmaData["station_longitude"], lmaData["station_latitude"], 8, "white", "o", linewidths=.5, edgecolors="black", transform=ccrs.PlateCarree(), zorder=4)
     lmaPlotFig = plt.gcf()
     # Add our data
     plot_points(lmaPlot, lonSet, latSet, altSet, timeSet, "rainbow", 5, vmin, vmax, relcolors, edge_color="black", edge_width=0.25)
     # Create save directory if it doesn't already exist
-    lmaProductPath = path.join("products", "hlma", "vhf-"+str(len(lmaFilePaths))+"min-analysis")
+    lmaProductPath = path.join("products", "wtlma", "vhf-"+str(len(lmaFilePaths))+"min-analysis")
     lmaSavePath = path.join(basePath, "output", lmaProductPath, runPathExt, dt.strftime(timeOfPlot, "%M")+".png")
     Path(path.dirname(lmaSavePath)).mkdir(parents=True, exist_ok=True)
     # Write the image
