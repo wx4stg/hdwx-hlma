@@ -3,7 +3,7 @@
 # Created 21 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 import hlmaFetch
-from os import path, listdir, chmod, uname
+from os import path, listdir
 from pyxlma.lmalib.io import read as lma_read
 import pandas as pd
 from datetime import datetime as dt, timedelta
