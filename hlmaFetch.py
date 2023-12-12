@@ -8,6 +8,23 @@ import json
 from shutil import copyfile
 from pathlib import Path
 
+def getLmaFilesBetweenTimes(startTime, endTime, giveFullPath=False):
+    # get base directory
+    basePath = path.dirname(path.abspath(__file__))
+    inputPath = path.join(basePath, "lightningin")
+    filesAvailable = sorted(listdir(inputPath))
+    filesToGrab = list()
+    for file in reversed(filesAvailable):
+        fileDt = dt.strptime(file.split("_")[1][-4:]+file.split("_")[2], "%m%d%H%M%S").replace(year=dt.utcnow().year)
+        if fileDt < endTime:
+                if giveFullPath:
+                    filesToGrab.append(path.join(inputPath, file))
+                else:
+                    filesToGrab.append(file)
+                if fileDt <= startTime:
+                    return list(reversed(filesToGrab))
+
+
 if __name__ == '__main__':
     # Get base directory
     basePath = path.dirname(path.abspath(__file__))
