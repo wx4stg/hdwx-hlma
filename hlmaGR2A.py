@@ -63,7 +63,6 @@ def makeSrcPlacefile(lmaFilePaths):
         outArr0 = np.char.add(outArr0, np.full((numRows, 1), "\\nStation Count:", dtype="|S17").astype(str))
         outArr0 = np.char.add(outArr0, lmaData.event_stations.data.astype(str).reshape(numRows, 1)).flatten()
         placeFileString = placeFileString+"\n".join(outArr0)
-    print(placeFileString)
     # Create a path object for GR2A placefile's productPath
     gr2aProductPath = path.join("gr2a", "")
     # Target path for gr2a placefiles is output/gr2a/1min-src.txt
@@ -101,7 +100,6 @@ if __name__ == "__main__":
             break
     # Get paths to those data
     oneMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(lastMinFileDt-timedelta(minutes=1), lastMinFileDt, True)
-    print(oneMinuteFiles)
     tenMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(lastMinFileDt-timedelta(minutes=10), lastMinFileDt, True)
     # Check to see if the one-minute placefile has the latest input file generated
     # Read in metadata for one minute placefile
