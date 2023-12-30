@@ -16,7 +16,7 @@ def getLmaFilesBetweenTimes(startTime, endTime, giveFullPath=False):
     filesAvailable = sorted(listdir(inputPath))
     filesToGrab = list()
     for file in reversed(filesAvailable):
-        fileDt = dt.strptime(file.split("_")[1][-4:]+file.split("_")[2], "%m%d%H%M%S").replace(year=dt.utcnow().year)
+        fileDt = dt.strptime(file.split("_")[1]+file.split("_")[2], "%y%m%d%H%M%S")
         if fileDt < endTime:
                 if giveFullPath:
                     filesToGrab.append(path.join(inputPath, file))
@@ -24,6 +24,8 @@ def getLmaFilesBetweenTimes(startTime, endTime, giveFullPath=False):
                     filesToGrab.append(file)
                 if fileDt <= startTime:
                     return list(reversed(filesToGrab))
+    if len(filesToGrab) > 0:
+        return list(reversed(filesToGrab))
 
 
 if __name__ == '__main__':

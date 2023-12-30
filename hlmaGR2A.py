@@ -95,12 +95,17 @@ if __name__ == "__main__":
         exit()
     # Get the time of the latest complete minute of data
     for file in reversed(filesToPlot):
-        lastMinFileDt = dt.strptime(file.split("_")[1][-4:]+file.split("_")[2], "%m%d%H%M%S").replace(year=dt.utcnow().year)
-        if lastMinFileDt.second == 0:
+        lastMinFileDt = dt.strptime(file.split("_")[1]+file.split("_")[2], "%y%m%d%H%M%S")
+        elapsedTime = int(file.split("_")[-1].replace(".dat", "").replace(".gz", ""))
+        elapsedTime = timedelta(seconds=elapsedTime)
+        lastMinFileDtEnd = lastMinFileDt + elapsedTime
+        if lastMinFileDtEnd.second == 0:
             break
     # Get paths to those data
-    oneMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(lastMinFileDt-timedelta(minutes=1), lastMinFileDt, True)
-    tenMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(lastMinFileDt-timedelta(minutes=10), lastMinFileDt, True)
+    startTimeForPeriod = lastMinFileDt - timedelta(minutes=1) + elapsedTime
+    oneMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(startTimeForPeriod, lastMinFileDt, True)
+    startTimeForPeriod = lastMinFileDt - timedelta(minutes=10) + elapsedTime
+    tenMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(startTimeForPeriod, lastMinFileDt, True)
     # Check to see if the one-minute placefile has the latest input file generated
     # Read in metadata for one minute placefile
     oneMinMetadataPath = path.join(basePath, "output", "metadata", "products", "142", lastMinFileDt.strftime("%Y%m%d%H00")+".json")
