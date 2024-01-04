@@ -45,7 +45,7 @@ def makeSrcPlacefile(lmaFilePaths, elapsedTimeOfPlot):
         point_mask = np.where((lmaData.event_chi2.data <= 1) & (lmaData.event_altitude.data <= 20000) & 
                               (lmaData.event_time.data <= np.array([thisTimeStep]).astype('datetime64[ns]')) &
                               (lmaData.event_time.data > np.array([timeStepStart]).astype('datetime64[ns]')))[0]
-        placeFileString = placeFileString+f"\TimeRange: {timeStepStart.strftime('%Y-%m-%dT%H:%M:%SZ')} {thisTimeStep.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
+        placeFileString = placeFileString+f"\nTimeRange: {timeStepStart.strftime('%Y-%m-%dT%H:%M:%SZ')} {thisTimeStep.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
         numRows = len(point_mask)
         if numRows > 0:
             lmaData = lmaData.isel(number_of_events=point_mask)
