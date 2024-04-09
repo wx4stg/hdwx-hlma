@@ -24,7 +24,9 @@ def makeSrcPlacefile(lmaFilePaths, elapsedTimeOfPlot):
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         # Read in LMA data
-        lmaData, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
+        lmaDataMaster, startTimeOfPlot = lma_read.dataset(lmaFilePaths)
+        qc_mask = np.where((lmaDataMaster.event_chi2.data <= 1) & (lmaDataMaster.event_altitude.data <= 20000))[0]
+        lmaDataMaster = lmaDataMaster.isel(number_of_events=qc_mask)
     # Get time of the plot for metadata
     lastFileName = path.basename(lmaFilePaths[-1])
     timeOfPlot = dt.strptime(lastFileName.split("_")[1]+lastFileName.split("_")[2], "%y%m%d%H%M%S")+timedelta(seconds=int(lastFileName.split("_")[3].replace(".dat", "").replace(".gz", "")))
@@ -42,13 +44,12 @@ def makeSrcPlacefile(lmaFilePaths, elapsedTimeOfPlot):
     while thisTimeStep > startTimeOfPlot:
         timeStepStart = thisTimeStep - timedelta(seconds=elapsedTimeOfPlot.total_seconds())
         print(thisTimeStep)
-        point_mask = np.where((lmaData.event_chi2.data <= 1) & (lmaData.event_altitude.data <= 20000) & 
-                              (lmaData.event_time.data <= np.array([thisTimeStep]).astype('datetime64[ns]')) &
-                              (lmaData.event_time.data > np.array([timeStepStart]).astype('datetime64[ns]')))[0]
+        point_mask = np.where((lmaDataMaster.event_time.data < np.array([thisTimeStep]).astype('datetime64[ns]')) &
+                              (lmaDataMaster.event_time.data >= np.array([timeStepStart]).astype('datetime64[ns]')))[0]
         placeFileString = placeFileString+f"\nTimeRange: {timeStepStart.strftime('%Y-%m-%dT%H:%M:%SZ')} {thisTimeStep.strftime('%Y-%m-%dT%H:%M:%SZ')}\n"
         numRows = len(point_mask)
         if numRows > 0:
-            lmaData = lmaData.isel(number_of_events=point_mask)
+            lmaData = lmaDataMaster.isel(number_of_events=point_mask)
             if numRows > 1:
                 scaleOfPoint = 1+((lmaData.event_time.data - lmaData.event_time.data[0]).astype(float)/float(lmaData.event_time.data[-1] - lmaData.event_time.data[0])*1024).astype(int)
             else:
@@ -125,6 +126,7 @@ if __name__ == "__main__":
     else:
         # If the json doesn't exist, then we definitely need to plot the latest file.
         makeSrcPlacefile(tenMinuteFiles, timedelta(seconds=60))
+    exit()
     # Now let's make a placefile for the last ten minutes of data
     tenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "145", lastMinFileDt.strftime("%Y%m%d%H00")+".json")
     if path.exists(tenMinMetadataPath):
