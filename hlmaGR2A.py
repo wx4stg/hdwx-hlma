@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # If there are no files in the input dir, exit immediately
     if len(filesToPlot) == 0:
         exit()
-    # Get the time of the latest complete minute of data
+    # Get the time of the latest data
     for file in reversed(filesToPlot):
         lastMinFileDt = dt.strptime(file.split("_")[1]+file.split("_")[2], "%y%m%d%H%M%S")
         elapsedTime = int(file.split("_")[-1].replace(".dat", "").replace(".gz", ""))
@@ -109,11 +109,9 @@ if __name__ == "__main__":
         lastMinFileDtEnd = lastMinFileDt + elapsedTime
         if lastMinFileDtEnd.second == 0:
             break
-    # Get paths to those data
-    startTimeForPeriod = lastMinFileDt - timedelta(minutes=1) + elapsedTime
-    oneMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(startTimeForPeriod, lastMinFileDt, True)
-    startTimeForPeriod = lastMinFileDt - timedelta(minutes=10) + elapsedTime
-    tenMinuteFiles = hlmaFetch.getLmaFilesBetweenTimes(startTimeForPeriod, lastMinFileDt, True)
+    # Get paths to most recent hour
+    startTimeForPeriod = lastMinFileDt - timedelta(minutes=60) + elapsedTime
+    lastHourFiles = hlmaFetch.getLmaFilesBetweenTimes(startTimeForPeriod, lastMinFileDt, True)
     # Check to see if the one-minute placefile has the latest input file generated
     # Read in metadata for one minute placefile
     oneMinMetadataPath = path.join(basePath, "output", "metadata", "products", "142", lastMinFileDt.strftime("%Y%m%d%H00")+".json")
@@ -122,17 +120,17 @@ if __name__ == "__main__":
             lastOneMinMetadata = json.load(jsonRead)
         # If the latest lma input file is newer than the last generated placefile, generate a new one
         if int(lastOneMinMetadata["productFrames"][0]["valid"]) < int(lastMinFileDt.strftime("%Y%m%d%H%M")):
-            makeSrcPlacefile(tenMinuteFiles, timedelta(seconds=60))
+            makeSrcPlacefile(lastHourFiles, timedelta(seconds=60))
     else:
         # If the json doesn't exist, then we definitely need to plot the latest file.
-        makeSrcPlacefile(tenMinuteFiles, timedelta(seconds=60))
+        makeSrcPlacefile(lastHourFiles, timedelta(seconds=60))
     exit()
-    # Now let's make a placefile for the last ten minutes of data
-    tenMinMetadataPath = path.join(basePath, "output", "metadata", "products", "145", lastMinFileDt.strftime("%Y%m%d%H00")+".json")
-    if path.exists(tenMinMetadataPath):
-        with open(tenMinMetadataPath, "r") as jsonRead:
+    # Now let's make a placefile accumulating five minutes of data
+    fiveMinMetadataPath = path.join(basePath, "output", "metadata", "products", "145", lastMinFileDt.strftime("%Y%m%d%H00")+".json")
+    if path.exists(fiveMinMetadataPath):
+        with open(fiveMinMetadataPath, "r") as jsonRead:
             lastTenMinMetadata = json.load(jsonRead)
         if int(lastTenMinMetadata["productFrames"][0]["valid"]) < int(lastMinFileDt.strftime("%Y%m%d%H%M")):
-            makeSrcPlacefile(tenMinuteFiles, timedelta(seconds=600))
+            makeSrcPlacefile(lastHourFiles, timedelta(seconds=300))
     else:
-        makeSrcPlacefile(tenMinuteFiles, timedelta(seconds=600))
+        makeSrcPlacefile(lastHourFiles, timedelta(seconds=300))
