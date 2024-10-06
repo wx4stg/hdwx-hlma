@@ -48,7 +48,7 @@ if __name__ == '__main__':
     currentHourInt = int(dt.strftime(now, "%Y%m%d%H00"))
     currentTimeInt = int(dt.strftime(now, "%Y%m%d%H%M"))
     filesToCopy = list()
-    lmaDataBasePath = path.join(path.abspath(sep), "net", "thor.geos.tamu.edu", "data1", "lma", "realtime", "processed_data")
+    lmaDataBasePath = path.join(path.abspath(sep), "opt", "thor-data1", "lma", "realtime", "processed_data")
     if not path.exists(lmaDataBasePath):
         exit()
     dataInputPath = path.join(basePath, "lightningin")
