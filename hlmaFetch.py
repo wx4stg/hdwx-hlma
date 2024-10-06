@@ -3,7 +3,7 @@
 # Created 23 December 2021 by Sam Gardner <stgardner4@tamu.edu>
 
 from datetime import datetime as dt, timedelta
-from os import path, listdir, sep, remove
+from os import path, listdir, sep, remove, uname
 import json
 from shutil import copyfile
 from pathlib import Path
@@ -15,7 +15,7 @@ def getLmaFilesBetweenTimes(startTime, endTime, giveFullPath=False):
     filesAvailable = sorted(listdir(inputPath))
     filesToGrab = list()
     for file in reversed(filesAvailable):
-        fileDt = dt.strptime(file.split("_")[1][-4:]+file.split("_")[2], "%m%d%H%M%S").replace(year=dt.utcnow().year)
+        fileDt = dt.strptime(file.split("_")[1]+file.split("_")[2], "%y%m%d%H%M%S")
         if fileDt < endTime:
                 if giveFullPath:
                     filesToGrab.append(path.join(inputPath, file))
@@ -23,6 +23,8 @@ def getLmaFilesBetweenTimes(startTime, endTime, giveFullPath=False):
                     filesToGrab.append(file)
                 if fileDt <= startTime:
                     return list(reversed(filesToGrab))
+    if len(filesToGrab) > 0:
+        return list(reversed(filesToGrab))
 
 
 if __name__ == '__main__':
@@ -48,22 +50,25 @@ if __name__ == '__main__':
     currentHourInt = int(dt.strftime(now, "%Y%m%d%H00"))
     currentTimeInt = int(dt.strftime(now, "%Y%m%d%H%M"))
     filesToCopy = list()
-    lmaDataBasePath = path.join(path.abspath(sep), "opt", "thor-data1", "lma", "realtime", "processed_data")
+    if uname.nodename() == 'wxgen3':
+        lmaDataBasePath = path.join(path.abspath(sep), "opt", "thor-data1", "lma", "realtime", "processed_data")
+    else:
+        lmaDataBasePath = path.join(path.abspath(sep), "home", "lma_admin", "lma", "realtime", "processed_data", "persec")
     if not path.exists(lmaDataBasePath):
         exit()
     dataInputPath = path.join(basePath, "lightningin")
     Path(dataInputPath).mkdir(parents=True, exist_ok=True)
-    for min in range(0, 60):
-        if str(lastHourInt + min) not in generatedFrames:
-            hypPathLastHour = path.join(lmaDataBasePath, dt.strftime(oneHourAgo, "%Y")[-2:]+dt.strftime(oneHourAgo, "%m%d"), dt.strftime(oneHourAgo ,"%H"), str(f'{min:02}'))
+    for this_min in range(0, 60):
+        if str(lastHourInt + this_min) not in generatedFrames:
+            hypPathLastHour = path.join(lmaDataBasePath, dt.strftime(oneHourAgo, "%Y")[-2:]+dt.strftime(oneHourAgo, "%m%d"), dt.strftime(oneHourAgo ,"%H"), str(f'{this_min:02}'))
             if path.exists(hypPathLastHour):
                 contentsOfLastHour = listdir(hypPathLastHour)
                 for file in contentsOfLastHour:
                     if file.endswith(".dat.gz"):
                         copyfile(path.join(hypPathLastHour, file), path.join(dataInputPath, file))
-        if str(currentHourInt + min) not in generatedFrames:
-            if (currentHourInt + min) < currentTimeInt:
-                hypPathCurrentHour = path.join(lmaDataBasePath, dt.strftime(now, "%Y")[-2:]+dt.strftime(now, "%m%d"), dt.strftime(now ,"%H"), str(f'{min:02}'))
+        if str(currentHourInt + this_min) not in generatedFrames:
+            if (currentHourInt + this_min) < currentTimeInt:
+                hypPathCurrentHour = path.join(lmaDataBasePath, dt.strftime(now, "%Y")[-2:]+dt.strftime(now, "%m%d"), dt.strftime(now ,"%H"), str(f'{this_min:02}'))
                 if path.exists(hypPathCurrentHour):
                     contentsOfCurrentHour = listdir(hypPathCurrentHour)
                     for file in contentsOfCurrentHour:
