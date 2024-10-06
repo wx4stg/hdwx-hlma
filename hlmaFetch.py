@@ -50,7 +50,7 @@ if __name__ == '__main__':
     currentHourInt = int(dt.strftime(now, "%Y%m%d%H00"))
     currentTimeInt = int(dt.strftime(now, "%Y%m%d%H%M"))
     filesToCopy = list()
-    if uname.nodename() == 'wxgen3':
+    if uname().nodename == 'wxgen3':
         lmaDataBasePath = path.join(path.abspath(sep), "opt", "thor-data1", "lma", "realtime", "processed_data")
     else:
         lmaDataBasePath = path.join(path.abspath(sep), "home", "lma_admin", "lma", "realtime", "processed_data", "persec")
